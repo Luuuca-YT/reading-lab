@@ -36,4 +36,25 @@ router.get('/day-number/:studentId', (req, res) => {
   res.json({ dayNumber: row.next_day });
 });
 
+// Daily confidence (before/after intervention)
+router.post('/:id/confidence', (req, res) => {
+  const { phase, confidence } = req.body;
+  if (!['before', 'after'].includes(phase)) {
+    return res.status(400).json({ error: 'phase must be "before" or "after"' });
+  }
+  if (!confidence) return res.status(400).json({ error: 'confidence required' });
+  db.prepare(
+    `INSERT INTO daily_confidence (session_id, phase, confidence) VALUES (?, ?, ?)
+     ON CONFLICT(session_id, phase) DO UPDATE SET confidence=excluded.confidence`
+  ).run(req.params.id, phase, confidence);
+  res.json({ success: true });
+});
+
+router.get('/:id/confidence', (req, res) => {
+  const rows = db.prepare(
+    'SELECT phase, confidence, created_at FROM daily_confidence WHERE session_id = ?'
+  ).all(req.params.id);
+  res.json(rows);
+});
+
 module.exports = router;

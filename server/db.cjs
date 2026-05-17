@@ -95,6 +95,15 @@ db.exec(`
     q4_notes TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS daily_confidence (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    phase TEXT NOT NULL CHECK(phase IN ('before', 'after')),
+    confidence TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(session_id, phase)
+  );
 `);
 
 // Seed articles

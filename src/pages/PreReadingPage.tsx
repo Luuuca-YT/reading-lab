@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
+import { ConfidenceCheck } from '../components/ConfidenceCheck';
 import { useSession } from '../context/SessionContext';
 import { articles } from '../db';
 import type { Article } from '../db';
@@ -11,6 +12,8 @@ export function PreReadingPage() {
   const navigate = useNavigate();
   const { session } = useSession();
   const [article, setArticle] = useState<Article | null>(null);
+  // Show confidence check only before article 1 (start of the day)
+  const [showConfidence, setShowConfidence] = useState(session.currentArticle === 1);
 
   useEffect(() => {
     const articleId = session.articleIds[session.currentArticle - 1];
@@ -21,6 +24,26 @@ export function PreReadingPage() {
 
   function handleStart() {
     navigate(`/session/${id}/read/${session.currentArticle}`);
+  }
+
+  if (showConfidence) {
+    return (
+      <Layout title={`Day ${session.dayNumber} · Before reading`} backTo={`/session/setup`}>
+        <div className="mx-auto max-w-4xl py-12">
+          <div className="text-center mb-8">
+            <div className="inline-block rounded-full bg-bluebook-100 px-5 py-2 text-sm font-medium text-bluebook-700">
+              {session.studentName} · Day {session.dayNumber}
+            </div>
+          </div>
+          <ConfidenceCheck
+            sessionId={Number(id)}
+            phase="before"
+            onSubmit={() => setShowConfidence(false)}
+            buttonLabel="Start Day"
+          />
+        </div>
+      </Layout>
+    );
   }
 
   return (

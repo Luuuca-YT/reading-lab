@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
+import { ConfidenceCheck } from '../components/ConfidenceCheck';
 import { useSession } from '../context/SessionContext';
 
 export function SessionCompletePage() {
   const navigate = useNavigate();
   const { session, resetSession } = useSession();
+  const [showConfidence, setShowConfidence] = useState(true);
 
   const totalMisread = [1, 2, 3].reduce(
     (sum, i) =>
@@ -21,6 +24,26 @@ export function SessionCompletePage() {
   function handleDone() {
     resetSession();
     navigate('/');
+  }
+
+  if (showConfidence && session.sessionId) {
+    return (
+      <Layout title={`Day ${session.dayNumber} · After reading`}>
+        <div className="mx-auto max-w-4xl py-12">
+          <div className="text-center mb-8">
+            <div className="inline-block rounded-full bg-emerald-100 px-5 py-2 text-sm font-medium text-emerald-700">
+              {session.studentName} · Day {session.dayNumber} done
+            </div>
+          </div>
+          <ConfidenceCheck
+            sessionId={session.sessionId}
+            phase="after"
+            onSubmit={() => setShowConfidence(false)}
+            buttonLabel="See Summary"
+          />
+        </div>
+      </Layout>
+    );
   }
 
   return (
