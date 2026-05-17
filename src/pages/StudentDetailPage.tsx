@@ -31,8 +31,12 @@ interface SessionSummary {
   articles: ArticleSummary[];
 }
 
+const API = import.meta.env.VITE_API_URL || '';
+
 interface ArticleSummary {
+  recordId: number;
   title: string;
+  audioPath: string | null;
   misread: number;
   pauses: number;
   studentQ1: string;
@@ -76,7 +80,9 @@ export function StudentDetailPage() {
             const tutorFb = await feedback.getTutorByRecordId(rec.id);
 
             articleSummaries.push({
+              recordId: rec.id,
               title: art?.title ?? `Article ${rec.article_id}`,
+              audioPath: rec.audio_path ?? null,
               misread: events.filter((e: ReadingEvent) => e.event_type === 'misread').length,
               pauses: events.filter((e: ReadingEvent) => e.event_type === 'pause').length,
               studentQ1: studentFb?.q1_understand ?? '',
@@ -269,7 +275,18 @@ export function StudentDetailPage() {
                   <div className="border-t border-bluebook-50 px-5 py-4 space-y-3">
                     {s.articles.map((a, i) => (
                       <div key={i} className="rounded-lg bg-bluebook-50/50 px-4 py-3">
-                        <div className="text-sm font-medium text-bluebook-700">{a.title}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-bluebook-700">{a.title}</div>
+                          {a.audioPath && (
+                            <a
+                              href={`${API}/api/records/${a.recordId}/audio`}
+                              download
+                              className="text-xs font-medium text-bluebook-500 hover:text-bluebook-700 underline"
+                            >
+                              Download Audio
+                            </a>
+                          )}
+                        </div>
                         <div className="mt-1 flex gap-4 text-xs text-bluebook-400">
                           <span className="text-red-500">{a.misread} misread</span>
                           <span className="text-amber-500">{a.pauses} pauses</span>

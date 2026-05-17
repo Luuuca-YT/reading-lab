@@ -5,7 +5,8 @@ import { Button } from '../components/Button';
 import { useSession } from '../context/SessionContext';
 import { useToast } from '../context/ToastContext';
 import { useRecorder, formatMs } from '../hooks/useRecorder';
-import { articles } from '../db';
+import { authFetch } from '../context/AuthContext';
+import { articles, readingRecords } from '../db';
 import type { Article } from '../db';
 
 export function ReadingPage() {
@@ -17,6 +18,7 @@ export function ReadingPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [doneDisabled, setDoneDisabled] = useState(false);
   const startedRef = useRef(false);
+  const blobPromiseRef = useRef<Promise<Blob | null> | null>(null);
 
   const order = Number(articleOrder);
 
@@ -33,8 +35,7 @@ export function ReadingPage() {
     startedRef.current = true;
 
     recorder.start().then((blob) => {
-      // Audio blob available after stop() — store reference for saving
-      (window as any).__lastRecording = blob;
+      blobPromiseRef.current = Promise.resolve(blob);
     });
 
     return () => {
@@ -86,8 +87,39 @@ export function ReadingPage() {
   function handleDone() {
     setDoneDisabled(true);
     recorder.stop();
-    toast('Reading saved', 'success');
-    navigate(`/session/${id}/feedback/${order}`);
+
+    // Save reading record and upload audio
+    (async () => {
+      try {
+        // Create the reading record
+        const record = await readingRecords.create({
+          session_id: Number(id),
+          article_id: session.articleIds[order - 1],
+          start_time: new Date().toISOString(),
+          end_time: null,
+        });
+
+        // Upload audio
+        const blob = await (blobPromiseRef.current ?? Promise.resolve(null));
+        if (blob && blob.size > 0) {
+          try {
+            await authFetch(`/api/records/${record.id}/audio`, {
+              method: 'POST',
+              headers: { 'Content-Type': blob.type },
+              body: blob,
+            });
+          } catch {
+            // Audio upload failed but record is saved
+          }
+        }
+
+        toast('Reading saved', 'success');
+        navigate(`/session/${id}/feedback/${order}`);
+      } catch (err: any) {
+        toast(err.message || 'Failed to save', 'error');
+        setDoneDisabled(false);
+      }
+    })();
   }
 
   const events = session.records[order]?.events ?? [];

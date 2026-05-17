@@ -1,9 +1,41 @@
 const express = require('express');
 const db = require('../db.cjs');
+const path = require('path');
+const fs = require('fs');
 const { authMiddleware } = require('../auth.cjs');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Audio upload/download
+const AUDIO_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'), 'audio');
+fs.mkdirSync(AUDIO_DIR, { recursive: true });
+
+// POST /api/records/:id/audio — upload audio blob
+router.post('/:id/audio', express.raw({ type: 'audio/*', limit: '100mb' }), (req, res) => {
+  const record = db.prepare('SELECT * FROM reading_records WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Record not found' });
+
+  const ext = req.headers['content-type']?.includes('opus') ? 'webm' : 'webm';
+  const filename = `record-${req.params.id}.${ext}`;
+  fs.writeFileSync(path.join(AUDIO_DIR, filename), req.body);
+
+  db.prepare('UPDATE reading_records SET audio_path = ? WHERE id = ?').run(filename, req.params.id);
+  res.json({ audio_path: filename });
+});
+
+// GET /api/records/:id/audio — download audio file
+router.get('/:id/audio', (req, res) => {
+  const record = db.prepare('SELECT * FROM reading_records WHERE id = ?').get(req.params.id);
+  if (!record || !record.audio_path) return res.status(404).json({ error: 'Audio not found' });
+
+  const filePath = path.join(AUDIO_DIR, record.audio_path);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Audio file missing' });
+
+  res.setHeader('Content-Type', 'audio/webm');
+  res.setHeader('Content-Disposition', `attachment; filename="reading-${record.id}.webm"`);
+  res.sendFile(filePath);
+});
 
 // Reading records
 router.get('/session/:sessionId', (req, res) => {
