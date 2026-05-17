@@ -17,7 +17,7 @@ app.use('/api/students', require('./routes/students.cjs'));
 app.use('/api/sessions', require('./routes/sessions.cjs'));
 app.use('/api/articles', require('./routes/articles.cjs'));
 app.use('/api/records', require('./routes/records.cjs'));
-app.use('/api/tutors', require('./routes/students.cjs')); // tutors CRUD uses same pattern
+app.use('/api/tutors', require('./routes/tutors.cjs'));
 
 // Health check
 app.get('/api/health', (_req, res) => {

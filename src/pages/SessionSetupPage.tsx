@@ -38,44 +38,49 @@ export function SessionSetupPage() {
     if (!selectedStudent) { setError('Please select a student.'); return; }
     if (!tutorName.trim()) { setError('Please enter the tutor name.'); return; }
 
-    // Find or create tutor
-    let tutor: Tutor | undefined;
-    const allTutors = await tutors.getAll();
-    tutor = allTutors.find((t: Tutor) => t.name.toLowerCase() === tutorName.trim().toLowerCase());
-    if (!tutor) {
-      tutor = await tutors.create({ name: tutorName.trim() });
+    try {
+      // Find or create tutor
+      let tutor: Tutor | undefined;
+      const allTutors = await tutors.getAll();
+      tutor = allTutors.find((t: Tutor) => t.name.toLowerCase() === tutorName.trim().toLowerCase());
+      if (!tutor) {
+        tutor = await tutors.create({ name: tutorName.trim() });
+      }
+
+      if (!tutor) return; // safety guard
+
+      // Calculate day number
+      const dayNumber = await sessions.getDayNumber(selectedStudent.id);
+
+      // Create session
+      const sess = await sessions.create({
+        student_id: selectedStudent.id,
+        tutor_id: tutor.id,
+        day_number: dayNumber,
+        date,
+      });
+
+      // Load articles
+      const arts: Article[] = await articles.getAll();
+      const articleIds = arts.slice(0, 3).map((a) => a.id);
+
+      setSession({
+        ...session,
+        sessionId: sess.id,
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.name,
+        tutorName: tutorName.trim(),
+        dayNumber,
+        date,
+        currentArticle: 1,
+        articleIds,
+      });
+
+      navigate(`/session/${sess.id}/ready`);
+    } catch (err: any) {
+      console.error('[SessionSetup]', err);
+      setError(err.message || 'Failed to start session. Please try again.');
     }
-
-    if (!tutor) return; // safety guard
-
-    // Calculate day number
-    const dayNumber = await sessions.getDayNumber(selectedStudent.id);
-
-    // Create session
-    const sess = await sessions.create({
-      student_id: selectedStudent.id,
-      tutor_id: tutor.id,
-      day_number: dayNumber,
-      date,
-    });
-
-    // Load articles
-    const arts: Article[] = await articles.getAll();
-    const articleIds = arts.slice(0, 3).map((a) => a.id);
-
-    setSession({
-      ...session,
-      sessionId: sess.id,
-      studentId: selectedStudent.id,
-      studentName: selectedStudent.name,
-      tutorName: tutorName.trim(),
-      dayNumber,
-      date,
-      currentArticle: 1,
-      articleIds,
-    });
-
-    navigate(`/session/${sess.id}/ready`);
   }
 
   return (
