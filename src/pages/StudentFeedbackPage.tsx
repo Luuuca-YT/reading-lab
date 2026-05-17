@@ -4,48 +4,78 @@ import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { useSession } from '../context/SessionContext';
 
-const questions = [
+interface Option {
+  emoji: string;
+  label: string;
+}
+
+interface Question {
+  key: string;
+  label: string;
+  highlight: string;
+  options: Option[];
+}
+
+const questions: Question[] = [
   {
     key: 'q1_understand',
-    label: 'How much did you understand this story?',
-    type: 'stars' as const,
+    label: 'How much {h} did you put in while reading this passage?',
+    highlight: 'effort',
+    options: [
+      { emoji: '😴', label: 'Almost none' },
+      { emoji: '🥱', label: 'A little' },
+      { emoji: '🤔', label: 'Some' },
+      { emoji: '😤', label: 'A lot' },
+      { emoji: '🧠', label: 'A whole lot' },
+    ],
   },
   {
     key: 'q2_difficulty',
-    label: 'How difficult was this story for you?',
-    type: 'choice' as const,
-    options: ['Too Easy', 'Just Right', 'Too Hard'],
+    label: 'How {h} was it for you to read this passage?',
+    highlight: 'hard',
+    options: [
+      { emoji: '😉', label: 'Very easy' },
+      { emoji: '😌', label: 'Easy' },
+      { emoji: '😑', label: 'Medium' },
+      { emoji: '😓', label: 'Hard' },
+      { emoji: '😩', label: 'Very Hard' },
+    ],
   },
   {
     key: 'q3_interest',
-    label: 'Did you find this story interesting?',
-    type: 'choice' as const,
-    options: ['Yes', 'A little', 'No'],
+    label: 'How much did you {h} reading this passage?',
+    highlight: 'enjoy',
+    options: [
+      { emoji: '🙁', label: 'Did not want to finish it' },
+      { emoji: '😕', label: 'Not very fun' },
+      { emoji: '😐', label: 'It was okay' },
+      { emoji: '🙂', label: 'I enjoyed it' },
+      { emoji: '😄', label: 'Great! I want to read more!' },
+    ],
   },
   {
     key: 'q4_effort',
-    label: 'How much effort did you put into reading?',
-    type: 'stars' as const,
+    label: 'How much did you {h} about this topic before reading this passage?',
+    highlight: 'already know',
+    options: [
+      { emoji: '🙁', label: 'I knew nothing about it' },
+      { emoji: '😕', label: 'I knew a little' },
+      { emoji: '😐', label: 'I knew some things' },
+      { emoji: '🙂', label: 'I knew a lot' },
+      { emoji: '😄', label: 'I already knew everything about it' },
+    ],
   },
 ];
 
-function Stars({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function QuestionLabel({ q, index }: { q: Question; index: number }) {
+  const [before, after] = q.label.split('{h}');
   return (
-    <div className="flex gap-3">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          onClick={() => onChange(n)}
-          className={`flex h-14 w-14 items-center justify-center rounded-xl text-2xl transition-all ${
-            n <= value
-              ? 'bg-bluebook-700 text-white shadow-md'
-              : 'border-2 border-bluebook-100 text-bluebook-300 hover:border-bluebook-200'
-          }`}
-        >
-          ★
-        </button>
-      ))}
-    </div>
+    <h3 className="text-lg text-bluebook-900 mb-4">
+      <span className="font-semibold mr-2">{index + 1}.</span>
+      {before}
+      <span className="font-bold">{q.highlight}</span>
+      {after}
+    </h3>
   );
 }
 
@@ -54,92 +84,77 @@ export function StudentFeedbackPage() {
   const navigate = useNavigate();
   const { session, setSession } = useSession();
   const order = Number(articleOrder);
-  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   function setAnswer(key: string, value: string) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleNext() {
-    if (step < questions.length - 1) {
-      setStep(step + 1);
-    } else {
-      // Save to session context
-      setSession({
-        ...session,
-        records: {
-          ...session.records,
-          [order]: {
-            ...session.records[order],
-            studentFeedback: questions.map((q) => answers[q.key] ?? ''),
-          },
+  const allAnswered = questions.every((q) => answers[q.key]);
+
+  function handleSubmit() {
+    setSession({
+      ...session,
+      records: {
+        ...session.records,
+        [order]: {
+          ...session.records[order],
+          studentFeedback: questions.map((q) => answers[q.key] ?? ''),
         },
-      });
-      navigate(`/session/${id}/tutor-feedback/${order}`);
-    }
+      },
+    });
+    navigate(`/session/${id}/tutor-feedback/${order}`);
   }
 
-  const q = questions[step];
-  const currentValue = answers[q.key] ?? '';
-
   return (
-    <Layout title={`Feedback · Article ${order}`} backTo={`/session/${id}/read/${order}`}>
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-8 py-12">
-        {/* Progress */}
-        <div className="flex gap-1">
-          {questions.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 w-10 rounded-full ${
-                i <= step ? 'bg-bluebook-500' : 'bg-bluebook-100'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Question card */}
-        <div className="w-full rounded-2xl border border-bluebook-100 bg-white p-8 text-center">
-          <p className="text-sm font-medium text-bluebook-400 uppercase tracking-wide mb-6">
-            Student Question {step + 1} of {questions.length}
+    <Layout title={`Student Feedback · Article ${order}`} backTo={`/session/${id}/read/${order}`}>
+      <div className="mx-auto max-w-4xl py-8 space-y-10">
+        <div className="text-center mb-2">
+          <p className="text-sm font-medium text-bluebook-400 uppercase tracking-wide mb-2">
+            After every passage
           </p>
-          <h2 className="text-heading text-bluebook-900 mb-8">{q.label}</h2>
-
-          {q.type === 'stars' ? (
-            <div className="flex justify-center">
-              <Stars
-                value={Number(currentValue) || 0}
-                onChange={(v) => setAnswer(q.key, String(v))}
-              />
-            </div>
-          ) : (
-            <div className="flex justify-center gap-4">
-              {q.options!.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => setAnswer(q.key, opt)}
-                  className={`rounded-xl border-2 px-8 py-4 text-lg font-medium transition-all ${
-                    currentValue === opt
-                      ? 'border-bluebook-500 bg-bluebook-50 text-bluebook-700'
-                      : 'border-bluebook-100 text-bluebook-400 hover:border-bluebook-200'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          )}
+          <h2 className="text-heading text-bluebook-900">Tap how you felt about the reading</h2>
         </div>
 
-        <Button
-          size="lg"
-          onClick={handleNext}
-          disabled={
-            !currentValue || (q.type === 'stars' && Number(currentValue) === 0)
-          }
-        >
-          {step < questions.length - 1 ? 'Next' : 'Submit'}
-        </Button>
+        {questions.map((q, qIdx) => {
+          const selected = answers[q.key] ?? '';
+          return (
+            <div key={q.key}>
+              <QuestionLabel q={q} index={qIdx} />
+              <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                {q.options.map((opt) => {
+                  const isSelected = selected === opt.label;
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => setAnswer(q.key, opt.label)}
+                      className={`flex flex-col items-center justify-between rounded-xl border-2 px-2 py-4 transition-all min-h-[140px] ${
+                        isSelected
+                          ? 'border-bluebook-500 bg-bluebook-50 ring-2 ring-bluebook-500/20 shadow-sm'
+                          : 'border-bluebook-100 bg-white hover:border-bluebook-300 hover:bg-bluebook-50/30'
+                      }`}
+                    >
+                      <span className="text-5xl mb-3 leading-none select-none">{opt.emoji}</span>
+                      <span
+                        className={`text-xs sm:text-sm text-center leading-tight ${
+                          isSelected ? 'text-bluebook-700 font-medium' : 'text-bluebook-600'
+                        }`}
+                      >
+                        {opt.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="flex justify-center pt-4 pb-12">
+          <Button size="lg" onClick={handleSubmit} disabled={!allAnswered} className="min-w-[200px]">
+            {allAnswered ? 'Submit' : `${questions.filter((q) => answers[q.key]).length} of ${questions.length} answered`}
+          </Button>
+        </div>
       </div>
     </Layout>
   );
