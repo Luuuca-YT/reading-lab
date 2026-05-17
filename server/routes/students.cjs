@@ -46,8 +46,47 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+  const studentId = req.params.id;
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(studentId);
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+
+  // Find all sessions and reading records for this student
+  const sessions = db.prepare('SELECT id FROM sessions WHERE student_id = ?').all(studentId);
+  const sessionIds = sessions.map((s) => s.id);
+
+  if (sessionIds.length > 0) {
+    const sPlaceholders = sessionIds.map(() => '?').join(',');
+    // Get all audio paths before deleting records
+    const records = db.prepare(
+      `SELECT id, audio_path FROM reading_records WHERE session_id IN (${sPlaceholders})`
+    ).all(...sessionIds);
+    const recordIds = records.map((r) => r.id);
+
+    db.transaction(() => {
+      if (recordIds.length > 0) {
+        const rPlaceholders = recordIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM student_feedback WHERE reading_record_id IN (${rPlaceholders})`).run(...recordIds);
+        db.prepare(`DELETE FROM tutor_feedback WHERE reading_record_id IN (${rPlaceholders})`).run(...recordIds);
+        db.prepare(`DELETE FROM reading_events WHERE reading_record_id IN (${rPlaceholders})`).run(...recordIds);
+      }
+      db.prepare(`DELETE FROM reading_records WHERE session_id IN (${sPlaceholders})`).run(...sessionIds);
+      db.prepare(`DELETE FROM daily_confidence WHERE session_id IN (${sPlaceholders})`).run(...sessionIds);
+      db.prepare('DELETE FROM sessions WHERE student_id = ?').run(studentId);
+      db.prepare('DELETE FROM students WHERE id = ?').run(studentId);
+    })();
+
+    // Delete audio files outside transaction
+    for (const rec of records) {
+      if (rec.audio_path) {
+        try { fs.unlinkSync(path.join(AUDIO_DIR, rec.audio_path)); } catch {}
+      }
+    }
+
+    res.json({ success: true, deleted_sessions: sessionIds.length, deleted_records: recordIds.length });
+  } else {
+    db.prepare('DELETE FROM students WHERE id = ?').run(studentId);
+    res.json({ success: true, deleted_sessions: 0, deleted_records: 0 });
+  }
 });
 
 // GET /api/students/:id/recordings — list all recordings with audio for a student
