@@ -38,8 +38,8 @@ function apiFetch(path: string, options?: RequestInit) {
   });
 }
 
-// Use server API when VITE_API_URL is set and not in Electron
-function useServer() { return !!API && !isElectron(); }
+// Use server API in browser, IPC in Electron
+function useServer() { return !isElectron(); }
 
 // ══════════════════════════════════════════
 // Dexie (IndexedDB) — local fallback
