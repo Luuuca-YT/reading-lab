@@ -1,0 +1,17 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/api/health"
+
+[service]
+port = "{{ env.PORT }}"
+
+[variables]
+DATA_DIR = "/data"
+JWT_SECRET = "reading-lab-jwt-secret-change-in-production"
+
+[mounts]
+data = "/data"
