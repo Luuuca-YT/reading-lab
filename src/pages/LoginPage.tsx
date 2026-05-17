@@ -18,9 +18,12 @@ export function LoginPage() {
       return;
     }
     setLoading(true);
+    console.log('[Login] submitting...');
     try {
       await login(username.trim(), password);
+      console.log('[Login] success');
     } catch (err: any) {
+      console.error('[Login] error:', err?.message || err);
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);

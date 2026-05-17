@@ -29,7 +29,8 @@ async function api(path: string, options?: RequestInit) {
         ...options?.headers,
       },
     });
-  } catch {
+  } catch (err) {
+    console.error('[API] network error:', err);
     throw new Error('Network error. Please check your connection and try again.');
   }
 
@@ -38,10 +39,12 @@ async function api(path: string, options?: RequestInit) {
     const text = await res.text();
     data = JSON.parse(text);
   } catch {
+    console.error('[API] non-JSON response, status:', res.status);
     throw new Error(`Unexpected server response (${res.status}). Please try again.`);
   }
 
   if (!res.ok) {
+    console.error('[API] request failed:', res.status, data?.error);
     throw new Error(data?.error || `Request failed (${res.status})`);
   }
   return data;
