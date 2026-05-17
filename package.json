@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Reading Lab — dyslexia reading assessment tool. Bluebook-inspired UI, works as Electron desktop app OR pure web app.",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",

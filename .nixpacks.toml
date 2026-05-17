@@ -1,0 +1,5 @@
+[build]
+nixpacksVersion = "1.41.0"
+
+[build.args]
+NIXPACKS_NODE_VERSION = "20"
