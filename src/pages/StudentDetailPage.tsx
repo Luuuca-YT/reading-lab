@@ -33,6 +33,26 @@ interface SessionSummary {
 
 const API = import.meta.env.VITE_API_URL || '';
 
+function authDownload(url: string, filename: string, onError: () => void) {
+  const token = localStorage.getItem('token');
+  fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.blob();
+    })
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    })
+    .catch(() => onError());
+}
+
 interface ArticleSummary {
   recordId: number;
   title: string;
@@ -244,33 +264,18 @@ export function StudentDetailPage() {
             <h2 className="text-subhead text-bluebook-900">Sessions</h2>
             <div className="flex gap-3">
               {hasRecordings && (
-                <a
-                  href={`${API}/api/students/${student.id}/recordings/zip`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const token = localStorage.getItem('token');
-                    fetch(`${API}/api/students/${student.id}/recordings/zip`, {
-                      headers: token ? { Authorization: `Bearer ${token}` } : {},
-                    })
-                      .then((r) => {
-                        if (!r.ok) throw new Error('Download failed');
-                        return r.blob();
-                      })
-                      .then((blob) => {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${student.name.replace(/[^a-zA-Z0-9一-鿿_-]/g, '_')}-recordings.zip`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast('Downloading recordings...', 'info');
-                      })
-                      .catch(() => toast('Download failed', 'error'));
-                  }}
+                <button
+                  onClick={() =>
+                    authDownload(
+                      `${API}/api/students/${student.id}/recordings/zip`,
+                      `${student.name.replace(/[^a-zA-Z0-9一-鿿_-]/g, '_')}-recordings.zip`,
+                      () => toast('Download failed', 'error')
+                    )
+                  }
                   className="inline-flex items-center justify-center rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-bluebook-500/30 px-4 py-2 text-sm gap-1.5 border border-bluebook-200 bg-white text-bluebook-700 hover:bg-bluebook-50 active:bg-bluebook-100"
                 >
                   Download All Recordings
-                </a>
+                </button>
               )}
               <Button variant="secondary" size="sm" onClick={handleExport}>
                 Export CSV
@@ -312,13 +317,18 @@ export function StudentDetailPage() {
                         <div className="flex items-center justify-between">
                           <div className="text-sm font-medium text-bluebook-700">{a.title}</div>
                           {a.audioPath && (
-                            <a
-                              href={`${API}/api/records/${a.recordId}/audio`}
-                              download
+                            <button
+                              onClick={() =>
+                                authDownload(
+                                  `${API}/api/records/${a.recordId}/audio`,
+                                  `recording-${a.recordId}.webm`,
+                                  () => toast('Download failed', 'error')
+                                )
+                              }
                               className="text-xs font-medium text-bluebook-500 hover:text-bluebook-700 underline"
                             >
                               Download Audio
-                            </a>
+                            </button>
                           )}
                         </div>
                         <div className="mt-1 flex gap-4 text-xs text-bluebook-400">
