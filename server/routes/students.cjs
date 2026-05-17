@@ -45,7 +45,7 @@ router.put('/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id));
 });
 
-router.delete('/:id', (_req, res) => {
+router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });

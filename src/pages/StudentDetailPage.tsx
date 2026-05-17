@@ -13,6 +13,7 @@ import {
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { PageSpinner } from '../components/Spinner';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 import { exportStudentCsv } from '../utils/exportCsv';
 import {
@@ -78,6 +79,8 @@ export function StudentDetailPage() {
   const [sessionSummaries, setSessionSummaries] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasRecordings, setHasRecordings] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -145,6 +148,19 @@ export function StudentDetailPage() {
     pauses: s.articles.reduce((sum, a) => sum + a.pauses, 0),
   }));
 
+  async function handleDelete() {
+    if (!id || !student) return;
+    setDeleting(true);
+    try {
+      await students.remove(Number(id));
+      toast('Student deleted', 'success');
+      navigate('/students', { replace: true });
+    } catch {
+      toast('Failed to delete student', 'error');
+      setDeleting(false);
+    }
+  }
+
   function handleExport() {
     if (!student) return;
     try {
@@ -196,7 +212,15 @@ export function StudentDetailPage() {
         <div className="rounded-2xl border border-bluebook-100 bg-white p-6">
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-sm font-medium text-bluebook-400 uppercase tracking-wide">Student Info</div>
+              <div className="flex items-start justify-between">
+                <div className="text-sm font-medium text-bluebook-400 uppercase tracking-wide">Student Info</div>
+                <button
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="inline-flex items-center justify-center rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30 px-3 py-1.5 text-sm gap-1 border border-red-200 bg-white text-red-600 hover:bg-red-50 active:bg-red-100"
+                >
+                  Delete Student
+                </button>
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <Info label="Name" value={student.name} />
                 <Info label="Age" value={student.age?.toString() ?? '—'} />
@@ -346,6 +370,18 @@ export function StudentDetailPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteModalOpen}
+        title="Delete Student"
+        message={`Are you sure you want to delete ${student.name}? This will permanently remove all sessions, recordings, and data. This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+      />
     </Layout>
   );
 }

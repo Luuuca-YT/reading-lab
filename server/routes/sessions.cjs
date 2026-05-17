@@ -57,4 +57,42 @@ router.get('/:id/confidence', (req, res) => {
   res.json(rows);
 });
 
+// DELETE /api/sessions/:id — cascade delete session and all related data + audio files
+router.delete('/:id', (req, res) => {
+  const path = require('path');
+  const fs = require('fs');
+  const sessionId = req.params.id;
+  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const records = db.prepare('SELECT id, audio_path FROM reading_records WHERE session_id = ?').all(sessionId);
+  const recordIds = records.map((r) => r.id);
+
+  const AUDIO_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'), 'audio');
+
+  db.transaction(() => {
+    if (recordIds.length > 0) {
+      const placeholders = recordIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM student_feedback WHERE reading_record_id IN (${placeholders})`).run(...recordIds);
+      db.prepare(`DELETE FROM tutor_feedback WHERE reading_record_id IN (${placeholders})`).run(...recordIds);
+      db.prepare(`DELETE FROM reading_events WHERE reading_record_id IN (${placeholders})`).run(...recordIds);
+    }
+    db.prepare('DELETE FROM reading_records WHERE session_id = ?').run(sessionId);
+    db.prepare('DELETE FROM daily_confidence WHERE session_id = ?').run(sessionId);
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+  })();
+
+  // Delete audio files outside the transaction
+  for (const rec of records) {
+    if (rec.audio_path) {
+      const filePath = path.join(AUDIO_DIR, rec.audio_path);
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      }
+    }
+  }
+
+  res.json({ success: true, deleted_records: recordIds.length });
+});
+
 module.exports = router;
