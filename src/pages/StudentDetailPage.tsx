@@ -57,6 +57,7 @@ export function StudentDetailPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [sessionSummaries, setSessionSummaries] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasRecordings, setHasRecordings] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -106,6 +107,10 @@ export function StudentDetailPage() {
         }
 
         setSessionSummaries(summaries);
+
+        // Check if student has any recordings
+        const hasAudio = summaries.some((s) => s.articles.some((a) => a.audioPath));
+        setHasRecordings(hasAudio);
       } catch {
         toast('Failed to load student data', 'error');
       }
@@ -238,6 +243,35 @@ export function StudentDetailPage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-subhead text-bluebook-900">Sessions</h2>
             <div className="flex gap-3">
+              {hasRecordings && (
+                <a
+                  href={`${API}/api/students/${student.id}/recordings/zip`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const token = localStorage.getItem('token');
+                    fetch(`${API}/api/students/${student.id}/recordings/zip`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    })
+                      .then((r) => {
+                        if (!r.ok) throw new Error('Download failed');
+                        return r.blob();
+                      })
+                      .then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${student.name.replace(/[^a-zA-Z0-9一-鿿_-]/g, '_')}-recordings.zip`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast('Downloading recordings...', 'info');
+                      })
+                      .catch(() => toast('Download failed', 'error'));
+                  }}
+                  className="inline-flex items-center justify-center rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-bluebook-500/30 px-4 py-2 text-sm gap-1.5 border border-bluebook-200 bg-white text-bluebook-700 hover:bg-bluebook-50 active:bg-bluebook-100"
+                >
+                  Download All Recordings
+                </a>
+              )}
               <Button variant="secondary" size="sm" onClick={handleExport}>
                 Export CSV
               </Button>
