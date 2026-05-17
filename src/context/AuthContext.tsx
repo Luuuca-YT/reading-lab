@@ -30,22 +30,15 @@ async function api(path: string, options?: RequestInit) {
       },
     });
   } catch {
-    throw new Error(
-      'Cannot reach server. Make sure `npm run dev:server` is running on port 3001.'
-    );
+    throw new Error('Network error. Please check your connection and try again.');
   }
 
-  const text = await res.text();
   let data: any;
   try {
+    const text = await res.text();
     data = JSON.parse(text);
   } catch {
-    // Server returned HTML (proxy not working or server down)
-    throw new Error(
-      `Server returned non-JSON response (status ${res.status}). ` +
-      `Make sure both 'npm run dev:server' AND 'npm run dev' are started. ` +
-      `The Vite proxy forwards /api to localhost:3001.`
-    );
+    throw new Error(`Unexpected server response (${res.status}). Please try again.`);
   }
 
   if (!res.ok) {
