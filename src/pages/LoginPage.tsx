@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 
+const API = import.meta.env.VITE_API_URL || '';
+
 export function LoginPage() {
-  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,19 +13,37 @@ export function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+
     if (!username.trim() || !password.trim()) {
       setError('Please enter both username and password.');
       return;
     }
+
     setLoading(true);
-    console.log('[Login] submitting...');
+
     try {
-      await login(username.trim(), password);
-      console.log('[Login] success');
+      // Direct fetch — no context, no middleware
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Login failed (${res.status})`);
+      }
+
+      // Store auth data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('admin', JSON.stringify(data.admin));
+
+      // Force a full page reload so all contexts pick up the token cleanly
+      window.location.hash = '#/';
+      window.location.reload();
     } catch (err: any) {
-      console.error('[Login] error:', err?.message || err);
-      setError(err.message || 'Login failed');
-    } finally {
+      setError(err.message || 'Login failed. Please try again.');
       setLoading(false);
     }
   }
