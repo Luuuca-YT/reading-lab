@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -11,6 +11,7 @@ import type { Student, Tutor, Article } from '../db';
 
 export function SessionSetupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { session, setSession } = useSession();
   const { toast } = useToast();
 
@@ -20,18 +21,44 @@ export function SessionSetupPage() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dayNumber, setDayNumber] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const list = await students.getAll();
         setStudentList(list);
+
+        // Auto-select student from URL ?studentId=X
+        const preselectedId = searchParams.get('studentId');
+        if (preselectedId) {
+          const match = list.find((s: Student) => s.id === Number(preselectedId));
+          if (match) setSelectedStudent(match);
+        }
       } catch {
         toast('Failed to load student list', 'error');
       }
       setLoading(false);
     })();
-  }, []);
+  }, [searchParams]);
+
+  // Dynamically compute day number when student selection changes
+  useEffect(() => {
+    if (!selectedStudent) {
+      setDayNumber(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const dn = await sessions.getDayNumber(selectedStudent.id);
+        if (!cancelled) setDayNumber(dn);
+      } catch {
+        if (!cancelled) setDayNumber(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedStudent]);
 
   async function handleStart() {
     setError('');
@@ -50,13 +77,13 @@ export function SessionSetupPage() {
       if (!tutor) return; // safety guard
 
       // Calculate day number
-      const dayNumber = await sessions.getDayNumber(selectedStudent.id);
+      const dn = dayNumber ?? await sessions.getDayNumber(selectedStudent.id);
 
       // Create session
       const sess = await sessions.create({
         student_id: selectedStudent.id,
         tutor_id: tutor.id,
-        day_number: dayNumber,
+        day_number: dn,
         date,
       });
 
@@ -70,7 +97,7 @@ export function SessionSetupPage() {
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
         tutorName: tutorName.trim(),
-        dayNumber,
+        dayNumber: dn,
         date,
         currentArticle: 1,
         articleIds,
@@ -142,7 +169,7 @@ export function SessionSetupPage() {
               <div className="rounded-xl border border-bluebook-100 bg-bluebook-50/50 p-4 text-center">
                 <span className="text-sm text-bluebook-400">Day Number</span>
                 <div className="text-display text-bluebook-700">
-                  {session.dayNumber || '—'}
+                  {dayNumber ?? '—'}
                 </div>
               </div>
             )}
