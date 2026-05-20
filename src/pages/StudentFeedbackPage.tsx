@@ -146,12 +146,280 @@ class AudioSynth {
 const synth = new AudioSynth();
 
 // ==========================================
+// VECTOR HIGH-FIDELITY CUSTOM MASCOT DRAWING
+// ==========================================
+interface CatAvatarProps {
+  catId: string;
+  expression: 'neutral' | 'happy' | 'excited' | 'smug' | 'shocked' | 'sad' | 'angry' | 'sleepy';
+  className?: string;
+}
+
+export function CatAvatar({ catId, expression, className = "w-full h-full" }: CatAvatarProps) {
+  let headColor = '#fb923c';       // default orange
+  let stripeColor = '#ea580c';     // dark orange
+  let earColor = '#fb923c';
+  let innerEarColor = '#ffccd5';
+  let snoutColor = '#ffedd5';      // snout cream backing
+  let noseColor = '#f87171';       // nose pink
+  let eyeColor = '#3f2b18';        // default dark eyes
+  let hasStripes = false;
+  let hasPatches = false;
+  let isSiamese = false;
+
+  if (catId === 'leo') {
+    headColor = '#fb923c'; // bright ginger orange
+    stripeColor = '#d97706';
+    earColor = '#fb923c';
+    innerEarColor = '#ffccd5';
+    snoutColor = '#ffedd5';
+    noseColor = '#fb7185';
+    eyeColor = '#3f2b18';
+    hasStripes = true; // Leo ginger stripes!
+  } else if (catId === 'luna') {
+    headColor = '#f5f5f4'; // royal cream
+    earColor = '#451a03';  // chocolate ears
+    innerEarColor = '#f472b6'; // hot pink inner
+    snoutColor = '#451a03';  // chocolate face points mask
+    noseColor = '#db2777';
+    eyeColor = '#06b6d4';  // glowing crystal ice-blue eyes
+    isSiamese = true;
+  } else if (catId === 'milo') {
+    headColor = '#e7e5e4'; // soft tabby grey
+    earColor = '#e7e5e4';
+    innerEarColor = '#fda4af';
+    snoutColor = '#ffffff';
+    noseColor = '#fb7185';
+    eyeColor = '#1e1b4b';
+    hasPatches = true; // Milo cute multi patches
+  } else if (catId === 'shadow') {
+    headColor = '#1e293b'; // midnight deep charcoal
+    stripeColor = '#0f172a';
+    earColor = '#1e293b';
+    innerEarColor = '#c084fc'; // mystical purple
+    snoutColor = '#0f172a';
+    noseColor = '#a855f7';
+    eyeColor = '#eab308'; // glowing yellow/gold eyes
+  }
+
+  // Render SVG eyes based on expression state
+  const renderEyes = () => {
+    switch (expression) {
+      case 'happy':
+        return (
+          <>
+            <path d="M19,48 Q26,37 33,48" fill="none" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+            <path d="M67,48 Q74,37 81,48" fill="none" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+          </>
+        );
+      case 'excited':
+        return (
+          <>
+            <path d="M19,45 C14,37 27,33 27,44 C27,33 40,37 35,45 L27,53 Z" fill="#f43f5e" />
+            <path d="M65,45 C60,37 73,33 73,44 C73,33 86,37 81,45 L73,53 Z" fill="#f43f5e" />
+          </>
+        );
+      case 'smug':
+        return (
+          <>
+            {/* Winking Left Eye */}
+            <path d="M19,48 Q26,54 33,48" fill="none" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+            {/* Smug Right Eye */}
+            <ellipse cx="74" cy="46" rx="8.5" ry="6.5" fill="#fff" stroke={eyeColor} strokeWidth="3" />
+            <circle cx="76.5" cy="46" r="4.5" fill={eyeColor} />
+          </>
+        );
+      case 'shocked':
+        return (
+          <>
+            <circle cx="26" cy="45" r="10.5" fill="#fff" stroke={eyeColor} strokeWidth="3" />
+            <circle cx="26" cy="45" r="4" fill={eyeColor} />
+            <circle cx="74" cy="45" r="10.5" fill="#fff" stroke={eyeColor} strokeWidth="3" />
+            <circle cx="74" cy="45" r="4" fill={eyeColor} />
+          </>
+        );
+      case 'sad':
+        return (
+          <>
+            <path d="M19,43 Q26,52 33,44" fill="none" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+            <path d="M67,43 Q74,52 81,44" fill="none" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+            {/* Hanging teardrops */}
+            <path d="M16,50 C16,55 13,58 13,60 C13,62 16,62 16,60 Z" fill="#3b82f6" />
+            <path d="M84,50 C84,55 87,58 87,60 C87,62 84,62 84,60 Z" fill="#3b82f6" />
+          </>
+        );
+      case 'angry':
+        return (
+          <>
+            {/* Furious eyebrows */}
+            <line x1="17" y1="33" x2="33" y2="41" stroke={eyeColor} strokeWidth="4.5" strokeLinecap="round" />
+            <line x1="83" y1="33" x2="67" y2="41" stroke={eyeColor} strokeWidth="4.5" strokeLinecap="round" />
+            {/* Angered eyes */}
+            <path d="M19,46 Q26,42 33,46 Q26,50 19,46" fill={eyeColor} />
+            <path d="M67,46 Q74,42 81,46 Q74,50 67,46" fill={eyeColor} />
+          </>
+        );
+      case 'sleepy':
+        return (
+          <>
+            <line x1="18" y1="46" x2="34" y2="46" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+            <line x1="66" y1="46" x2="82" y2="46" stroke={eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+          </>
+        );
+      case 'neutral':
+      default:
+        return (
+          <>
+            <ellipse cx="26" cy="45" rx="8" ry="10" fill="#fff" stroke={eyeColor} strokeWidth="3" />
+            <circle cx="26" cy="45" r="4.5" fill={eyeColor} />
+            <circle cx="24" cy="42.5" r="1.8" fill="#fff" />
+            
+            <ellipse cx="74" cy="45" rx="8" ry="10" fill="#fff" stroke={eyeColor} strokeWidth="3" />
+            <circle cx="74" cy="45" r="4.5" fill={eyeColor} />
+            <circle cx="72" cy="42.5" r="1.8" fill="#fff" />
+          </>
+        );
+    }
+  };
+
+  // Render SVG mouth based on expression state
+  const renderMouth = () => {
+    switch (expression) {
+      case 'happy':
+        return (
+          <path d="M41,66 Q50,79 59,66 Q50,68 41,66 Z" fill="#f43f5e" stroke="#3f2b18" strokeWidth="2" />
+        );
+      case 'excited':
+        return (
+          <ellipse cx="50" cy="71" rx="6.5" ry="9" fill="#f43f5e" stroke="#3f2b18" strokeWidth="2" />
+        );
+      case 'smug':
+        return (
+          <path d="M40,64 Q50,74 57,64" fill="none" stroke="#3f2b18" strokeWidth="3.5" strokeLinecap="round" />
+        );
+      case 'shocked':
+        return (
+          <circle cx="50" cy="71" r="5" fill="#f43f5e" stroke="#3f2b18" strokeWidth="2" />
+        );
+      case 'sad':
+        return (
+          <path d="M41,70 Q50,61 59,70" fill="none" stroke="#3f2b18" strokeWidth="3.5" strokeLinecap="round" />
+        );
+      case 'angry':
+        return (
+          <line x1="41" y1="69" x2="59" y2="69" stroke="#3f2b18" strokeWidth="4" strokeLinecap="round" />
+        );
+      case 'sleepy':
+        return (
+          <circle cx="50" cy="69" r="3.5" fill="#ef4444" opacity="0.85" />
+        );
+      case 'neutral':
+      default:
+        return (
+          <path d="M39,65 Q44.5,70 50,65 Q55.5,70 61,65" fill="none" stroke="#3f2b18" strokeWidth="3.2" strokeLinecap="round" />
+        );
+    }
+  };
+
+  return (
+    <svg viewBox="0 0 100 100" className={className} style={{ transition: 'all 0.2s ease-in-out' }}>
+      {/* Ear polygons */}
+      {/* Left Ear */}
+      <polygon 
+        points="14,35 2,2 35,21" 
+        fill={earColor} 
+        stroke={catId === 'shadow' ? '#334155' : 'none'}
+        strokeWidth="1.5"
+      />
+      <polygon points="16,31 7,8 31,20" fill={innerEarColor} />
+
+      {/* Right Ear */}
+      <polygon 
+        points="86,35 98,2 65,21" 
+        fill={earColor} 
+        stroke={catId === 'shadow' ? '#334155' : 'none'}
+        strokeWidth="1.5"
+      />
+      <polygon points="84,31 93,8 69,20" fill={innerEarColor} />
+
+      {/* Main Head Circle (Upscaled to fit the SVG and make the cat head look giant and gorgeous) */}
+      <ellipse 
+        cx="50" 
+        cy="54" 
+        rx="43" 
+        ry="36" 
+        fill={headColor} 
+        stroke={catId === 'shadow' ? '#334155' : 'none'}
+        strokeWidth="1.5"
+      />
+
+      {/* Patches for Milo (Calico) */}
+      {hasPatches && (
+        <>
+          {/* Left orange calico patch */}
+          <path d="M8,48 Q23,30 35,45 Q27,67 12,60 Z" fill="#fb923c" opacity="0.95" />
+          {/* Right stone calico patch */}
+          <path d="M92,48 Q77,30 65,45 Q73,67 88,60 Z" fill="#44403c" opacity="0.95" />
+        </>
+      )}
+
+      {/* Stripes for Leo (Ginger) */}
+      {hasStripes && (
+        <>
+          {/* Top of head stripes */}
+          <path d="M45,20 L50,32 L55,20 Z" fill={stripeColor} />
+          <path d="M35,22 L41,30 L43,22 Z" fill={stripeColor} />
+          <path d="M65,22 L59,30 L57,22 Z" fill={stripeColor} />
+          {/* Cheek side stripes */}
+          <path d="M8,50 L22,52 L17,47 Z" fill={stripeColor} />
+          <path d="M8,58 L20,59 L16,54 Z" fill={stripeColor} />
+          <path d="M92,50 L78,52 L83,47 Z" fill={stripeColor} />
+          <path d="M92,58 L80,59 L84,54 Z" fill={stripeColor} />
+        </>
+      )}
+
+      {/* Siamese Snout Mask */}
+      {isSiamese && (
+        <ellipse cx="50" cy="58" rx="24" ry="17" fill={snoutColor} />
+      )}
+
+      {/* Pink Blushing Cheeks */}
+      {(expression === 'happy' || expression === 'excited' || expression === 'smug') && (
+        <>
+          <circle cx="20" cy="59" r="6" fill="#f43f5e" opacity="0.35" />
+          <circle cx="80" cy="59" r="6" fill="#f43f5e" opacity="0.35" />
+        </>
+      )}
+
+      {/* Cute Whiskers */}
+      <line x1="9" y1="56" x2="-4" y2="54" stroke={catId === 'shadow' ? '#475569' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="61" x2="-5" y2="62" stroke={catId === 'shadow' ? '#475569' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" />
+      <line x1="91" y1="56" x2="104" y2="54" stroke={catId === 'shadow' ? '#475569' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" />
+      <line x1="92" y1="61" x2="105" y2="62" stroke={catId === 'shadow' ? '#475569' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" />
+
+      {/* Draw Dynamic eyes */}
+      {renderEyes()}
+
+      {/* Snout Backing for non-siamese */}
+      {!isSiamese && (
+        <ellipse cx="50" cy="62" rx="13" ry="9" fill={snoutColor} />
+      )}
+
+      {/* Small triangle Nose */}
+      <polygon points="46.5,59 53.5,59 50,63.5" fill={noseColor} />
+
+      {/* Draw dynamic mouth */}
+      {renderMouth()}
+    </svg>
+  );
+}
+
+// ==========================================
 // DATA STRUCTURES & DATA COMPATIBILITY MATRIX
 // ==========================================
 interface Option {
   emoji: string;
   label: string;
-  mascotEmoji: string;
+  expression: 'neutral' | 'happy' | 'excited' | 'smug' | 'shocked' | 'sad' | 'angry' | 'sleepy';
 }
 
 interface Question {
@@ -160,7 +428,7 @@ interface Question {
   highlight: string;
   description: string;
   themeColor: 'emerald' | 'purple' | 'amber' | 'blue';
-  baseMascotEmoji: string;
+  baseExpression: 'neutral' | 'happy' | 'excited' | 'smug' | 'shocked' | 'sad' | 'angry' | 'sleepy';
   options: Option[];
 }
 
@@ -171,13 +439,13 @@ const questions: Question[] = [
     highlight: 'effort',
     description: 'Did you concentrate and try your best to read clearly?',
     themeColor: 'emerald',
-    baseMascotEmoji: '🐱',
+    baseExpression: 'neutral',
     options: [
-      { emoji: '💤', label: 'Almost none', mascotEmoji: '😾' },
-      { emoji: '🐌', label: 'A little', mascotEmoji: '🐱' },
-      { emoji: '🚶', label: 'Some', mascotEmoji: '😺' },
-      { emoji: '🏃', label: 'A lot', mascotEmoji: '😸' },
-      { emoji: '🚀', label: 'A whole lot', mascotEmoji: '😻' },
+      { emoji: '💤', label: 'Almost none', expression: 'sleepy' },
+      { emoji: '🐌', label: 'A little', expression: 'sad' },
+      { emoji: '🚶', label: 'Some', expression: 'neutral' },
+      { emoji: '🏃', label: 'A lot', expression: 'happy' },
+      { emoji: '🚀', label: 'A whole lot', expression: 'excited' },
     ],
   },
   {
@@ -186,13 +454,13 @@ const questions: Question[] = [
     highlight: 'hard',
     description: 'Were the words and sentences easy or tough for you?',
     themeColor: 'purple',
-    baseMascotEmoji: '🐱',
+    baseExpression: 'neutral',
     options: [
-      { emoji: '🎈', label: 'Very easy', mascotEmoji: '😸' },
-      { emoji: '🌱', label: 'Easy', mascotEmoji: '😺' },
-      { emoji: '🚲', label: 'Medium', mascotEmoji: '😼' },
-      { emoji: '🧗', label: 'Hard', mascotEmoji: '🙀' },
-      { emoji: '⛰️', label: 'Very Hard', mascotEmoji: '😿' },
+      { emoji: '🎈', label: 'Very easy', expression: 'excited' },
+      { emoji: '🌱', label: 'Easy', expression: 'happy' },
+      { emoji: '🚲', label: 'Medium', expression: 'smug' },
+      { emoji: '🧗', label: 'Hard', expression: 'shocked' },
+      { emoji: '⛰️', label: 'Very Hard', expression: 'sad' },
     ],
   },
   {
@@ -201,13 +469,13 @@ const questions: Question[] = [
     highlight: 'enjoy',
     description: 'Did you find the content fun and interesting to read?',
     themeColor: 'amber',
-    baseMascotEmoji: '🐱',
+    baseExpression: 'neutral',
     options: [
-      { emoji: '💔', label: 'Did not want to finish it', mascotEmoji: '😾' },
-      { emoji: '🥱', label: 'Not very fun', mascotEmoji: '😿' },
-      { emoji: '🍿', label: 'It was okay', mascotEmoji: '🐱' },
-      { emoji: '⭐', label: 'I enjoyed it', mascotEmoji: '😺' },
-      { emoji: '🎉', label: 'Great! I want to read more!', mascotEmoji: '😻' },
+      { emoji: '💔', label: 'Did not want to finish it', expression: 'angry' },
+      { emoji: '🥱', label: 'Not very fun', expression: 'sad' },
+      { emoji: '🍿', label: 'It was okay', expression: 'neutral' },
+      { emoji: '⭐', label: 'I enjoyed it', expression: 'happy' },
+      { emoji: '🎉', label: 'Great! I want to read more!', expression: 'excited' },
     ],
   },
   {
@@ -216,27 +484,16 @@ const questions: Question[] = [
     highlight: 'already know',
     description: 'Was this topic brand new, or did you know a lot about it?',
     themeColor: 'blue',
-    baseMascotEmoji: '🐱',
+    baseExpression: 'neutral',
     options: [
-      { emoji: '❓', label: 'I knew nothing about it', mascotEmoji: '🙀' },
-      { emoji: '🔍', label: 'I knew a little', mascotEmoji: '🐱' },
-      { emoji: '📚', label: 'I knew some things', mascotEmoji: '😺' },
-      { emoji: '🌍', label: 'I knew a lot', mascotEmoji: '😸' },
-      { emoji: '👑', label: 'I already knew everything about it', mascotEmoji: '😼' },
+      { emoji: '❓', label: 'I knew nothing about it', expression: 'shocked' },
+      { emoji: '🔍', label: 'I knew a little', expression: 'sleepy' },
+      { emoji: '📚', label: 'I knew some things', expression: 'happy' },
+      { emoji: '🌍', label: 'I knew a lot', expression: 'smug' },
+      { emoji: '👑', label: 'I already knew everything about it', expression: 'excited' },
     ],
   },
 ];
-
-interface CatCompanion {
-  id: string;
-  name: string;
-  emoji: string;
-  breed: string;
-  description: string;
-  baseColor: string;
-  gradient: string;
-  personality: string;
-}
 
 const cats: CatCompanion[] = [
   {
@@ -280,15 +537,6 @@ const cats: CatCompanion[] = [
     personality: 'mysterious'
   }
 ];
-
-interface ThemeConfig {
-  key: string;
-  bgGrad: string;
-  cardBg: string;
-  glowColor: string;
-  particleType: 'space' | 'jungle' | 'ocean' | 'library';
-  textColor: string;
-}
 
 const slideThemes: ThemeConfig[] = [
   {
@@ -573,34 +821,24 @@ export function StudentFeedbackPage() {
   // Determine active mascot emoji and dialogue
   const activeMascot = useMemo(() => {
     const isHovered = hoveredIdx !== null;
-    let emoji = currentQuestion.baseMascotEmoji;
+    let expression: 'neutral' | 'happy' | 'excited' | 'smug' | 'shocked' | 'sad' | 'angry' | 'sleepy' = currentQuestion.baseExpression;
     let labelText: string | null = null;
 
     if (isHovered) {
       const opt = currentQuestion.options[hoveredIdx!];
-      emoji = opt.mascotEmoji;
+      expression = opt.expression;
       labelText = opt.label;
     } else if (selectedAnswer) {
       const selectedIdx = currentQuestion.options.findIndex((opt) => opt.label === selectedAnswer);
       if (selectedIdx !== -1) {
         const opt = currentQuestion.options[selectedIdx];
-        emoji = opt.mascotEmoji;
+        expression = opt.expression;
         labelText = opt.label;
       }
     }
 
-    // Shadow black cat maps to actual kitty emoji
-    if (selectedCatId === 'shadow') {
-      if (emoji === '🐱') emoji = '🐈‍⬛';
-      else if (emoji === '😺') emoji = '😸';
-      else if (emoji === '😾') emoji = '🐈‍⬛';
-    } else if (selectedCatId === 'leo') {
-      if (emoji === '🐱') emoji = '🦁';
-      else if (emoji === '😺') emoji = '😸';
-    }
-
     return {
-      emoji,
+      expression,
       dialogue: getDialogue(selectedCatId || 'leo', activeCostume, currentQuestion.key, labelText),
       isHovered,
     };
@@ -614,7 +852,7 @@ export function StudentFeedbackPage() {
     if (currentIdx < questions.length - 1) {
       setTimeout(() => {
         handleNext();
-      }, 550); // slight tactile delay to let child enjoy the feedback pop/accessories
+      }, 550); // slight delay to enjoy mascot feedback
     }
   }
 
@@ -685,35 +923,35 @@ export function StudentFeedbackPage() {
     switch (activeCostume) {
       case 'astronaut':
         return (
-          <div className="absolute inset-[-4px] rounded-full border-4 border-cyan-300 bg-cyan-200/20 animate-pulse flex items-center justify-center z-20">
-            <span className="absolute bottom-1 right-2 text-2xl">🚀</span>
+          <div className="absolute inset-[-4px] rounded-full border-4 border-cyan-350 bg-cyan-250/20 animate-pulse flex items-center justify-center z-20">
+            <span className="absolute bottom-2 right-4 text-3xl">🚀</span>
           </div>
         );
       case 'pirate':
         return (
           <>
-            <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-5xl rotate-[-10deg] drop-shadow z-20 select-none">🏴‍☠️</span>
-            <div className="absolute top-[47%] left-[32%] w-5 h-5 rounded-full bg-slate-900 border border-slate-700 z-20" />
-            <div className="absolute top-[42%] left-[24%] w-9 h-0.5 bg-slate-900 rotate-[15deg] z-20" />
+            <span className="absolute -top-12 left-1/2 -translate-x-1/2 text-6.5xl rotate-[-10deg] drop-shadow-lg z-20 select-none">🏴‍☠️</span>
+            <div className="absolute top-[46%] left-[28%] w-8 h-8 rounded-full bg-slate-900 border border-slate-700 z-20 shadow" />
+            <div className="absolute top-[41%] left-[17%] w-14 h-0.75 bg-slate-900 rotate-[15deg] z-20" />
           </>
         );
       case 'sunglasses':
         return (
-          <span className="absolute top-[38%] left-1/2 -translate-x-1/2 text-6xl drop-shadow z-20 select-none animate-bounce" style={{ animationDuration: '2.5s' }}>🕶️</span>
+          <span className="absolute top-[36%] left-1/2 -translate-x-1/2 text-7xl drop-shadow-md z-20 select-none animate-bounce" style={{ animationDuration: '2.5s' }}>🕶️</span>
         );
       case 'wizard':
         return (
           <>
-            <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-6.5xl rotate-[-5deg] drop-shadow z-20 select-none">🧙‍♂️</span>
-            <span className="absolute top-1/2 -left-4 text-2xl animate-spin" style={{ animationDuration: '4s' }}>✨</span>
-            <span className="absolute top-1/3 -right-4 text-2xl animate-bounce">🔮</span>
+            <span className="absolute -top-14 left-1/2 -translate-x-1/2 text-8xl rotate-[-5deg] drop-shadow-lg z-20 select-none">🧙‍♂️</span>
+            <span className="absolute top-1/2 -left-6 text-3xl animate-spin" style={{ animationDuration: '4s' }}>✨</span>
+            <span className="absolute top-1/3 -right-6 text-3xl animate-bounce">🔮</span>
           </>
         );
       case 'crown':
         return (
           <>
-            <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-6xl rotate-[4deg] drop-shadow-md animate-bounce z-20 select-none" style={{ animationDuration: '3.5s' }}>👑</span>
-            <span className="absolute -top-3 -right-2 text-xl animate-pulse">✨</span>
+            <span className="absolute -top-14 left-1/2 -translate-x-1/2 text-7.5xl rotate-[4deg] drop-shadow-md animate-bounce z-20 select-none" style={{ animationDuration: '3.5s' }}>👑</span>
+            <span className="absolute -top-3 -right-3 text-2xl animate-pulse">✨</span>
           </>
         );
       default:
@@ -811,7 +1049,7 @@ export function StudentFeedbackPage() {
               >
                 {/* Cat Avatar Circle */}
                 <div className={`h-24 w-24 rounded-full flex items-center justify-center border-4 border-slate-100 shadow-inner group-hover:scale-105 transition-transform duration-250 ${catCompanion.baseColor}`}>
-                  <span className="text-5xl select-none leading-none inline-block group-hover:rotate-[6deg] transition-transform">{catCompanion.emoji}</span>
+                  <CatAvatar catId={catCompanion.id} expression="happy" className="w-full h-full p-1.5" />
                 </div>
 
                 {/* Cat Name & Breed */}
@@ -978,22 +1216,24 @@ export function StudentFeedbackPage() {
               {activeMascot.dialogue}
             </div>
 
-            {/* Breathing Mascot Circle Container */}
-            <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center transition-all duration-300 animate-float-slow z-10">
+            {/* Breathing Mascot Circle Container - Enriched size (from w-44/h-44 to massive w-52/h-52 md:w-64 md:h-64) */}
+            <div className="relative w-52 h-52 md:w-64 md:h-64 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center transition-all duration-300 animate-float-slow z-10">
               
               <div className="absolute inset-4 rounded-full bg-white/5 filter blur(6px)" />
 
-              {/* Big Expressive Cartoon Cat Emoji */}
-              <span className="text-6.5xl md:text-7.5xl select-none leading-none inline-block transform transition-transform duration-200 hover:scale-105 active:rotate-6">
-                {activeMascot.emoji}
-              </span>
+              {/* Vector High-Definition Dynamic Cat Face Avatar! */}
+              <CatAvatar 
+                catId={selectedCatId || 'leo'} 
+                expression={activeMascot.expression} 
+                className="w-full h-full p-2.5"
+              />
 
               {/* Responsive accessory decorations / skins */}
               {renderCostumeOverlay()}
 
             </div>
 
-            {/* Interactive Dressing Closet Closet Shelf */}
+            {/* Interactive Dressing Closet Shelf */}
             <div className="mt-6 w-full max-w-xs bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-md z-10">
               <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5 text-center">🐾 Outfit Wardrobe 🐾</p>
               <div className="flex justify-around items-center gap-1">
@@ -1041,7 +1281,7 @@ export function StudentFeedbackPage() {
               </p>
             </div>
 
-            {/* Tactile 3D Option Cards Vertical Stack */}
+            {/* Tactile 3D Option Cards Vertical Stack with dynamic CatAvatar facial expressions */}
             <div className="flex flex-col gap-3">
               {currentQuestion.options.map((opt, idx) => {
                 const isSelected = selectedAnswer === opt.label;
@@ -1074,21 +1314,53 @@ export function StudentFeedbackPage() {
                       {idx + 1}
                     </span>
 
-                    {/* Gigantic Card Emoji */}
-                    <span className={`text-3.5xl md:text-4.5xl select-none leading-none transition-transform duration-200 ${
-                      isSelected 
-                        ? 'scale-110 rotate-6' 
-                        : 'group-hover:scale-115 group-hover:rotate-[-4deg]'
+                    {/* Option Icon: Dynamic customized cat head avatar with specific option expression! */}
+                    <div className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 p-1.5 shadow-inner group-hover:scale-110 transition-all duration-250 ${
+                      isSelected ? 'bg-white/20 scale-105 border-white/40' : 'bg-white/10'
                     }`}>
-                      {opt.emoji}
-                    </span>
+                      <CatAvatar 
+                        catId={selectedCatId || 'leo'} 
+                        expression={opt.expression} 
+                        className="w-full h-full" 
+                      />
+                    </div>
 
                     {/* Choice Text Label */}
-                    <span className={`flex-1 font-extrabold text-xs md:text-sm pr-4 leading-tight transition-colors ${
-                      isSelected ? 'text-white font-black' : 'text-slate-200 group-hover:text-white'
-                    }`}>
-                      {opt.label}
-                    </span>
+                    <div className="flex flex-col flex-1 gap-0.5">
+                      <span className={`font-extrabold text-sm md:text-base pr-4 leading-tight transition-colors ${
+                        isSelected ? 'text-white font-black' : 'text-slate-200 group-hover:text-white'
+                      }`}>
+                        {opt.label}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-350/90 group-hover:text-white/80 transition-colors flex items-center gap-1">
+                        <span>{opt.emoji}</span>
+                        <span>{
+                          opt.label === 'Almost none' ? 'Felt super tired...' :
+                          opt.label === 'A little' ? 'Tried a tiny bit' :
+                          opt.label === 'Some' ? 'Focused standard' :
+                          opt.label === 'A lot' ? 'Very focused!' :
+                          opt.label === 'A whole lot' ? 'Absolute master effort! 🚀' :
+                          
+                          opt.label === 'Very easy' ? 'Like a walk in the park! 🎈' :
+                          opt.label === 'Easy' ? 'Quite smooth 🌱' :
+                          opt.label === 'Medium' ? 'A solid challenge 🚲' :
+                          opt.label === 'Hard' ? 'Quite tough! 🧗' :
+                          opt.label === 'Very Hard' ? 'Extremely difficult! ⛰️' :
+                          
+                          opt.label === 'Did not want to finish it' ? 'No fun at all 💔' :
+                          opt.label === 'Not very fun' ? 'A bit boring... 🥱' :
+                          opt.label === 'It was okay' ? 'Decent 🍿' :
+                          opt.label === 'I enjoyed it' ? 'Pretty fun! ⭐' :
+                          opt.label === 'Great! I want to read more!' ? 'LOVED IT! 🎉' :
+                          
+                          opt.label === 'I knew nothing about it' ? 'Brand new topic! ❓' :
+                          opt.label === 'I knew a little' ? 'Heard of it before 🔍' :
+                          opt.label === 'I knew some things' ? 'Decent background 📚' :
+                          opt.label === 'I knew a lot' ? 'Quite familiar 🌍' :
+                          opt.label === 'I already knew everything about it' ? 'Expert topic! 👑' : ''
+                        }</span>
+                      </span>
+                    </div>
 
                     {/* Interactive Selection Checkmark Marker */}
                     {isSelected && (
@@ -1165,4 +1437,25 @@ export function StudentFeedbackPage() {
       </div>
     </Layout>
   );
+}
+
+// Interface declarations to satisfy type limits
+interface CatCompanion {
+  id: string;
+  name: string;
+  emoji: string;
+  breed: string;
+  description: string;
+  baseColor: string;
+  gradient: string;
+  personality: string;
+}
+
+interface ThemeConfig {
+  key: string;
+  bgGrad: string;
+  cardBg: string;
+  glowColor: string;
+  particleType: 'space' | 'jungle' | 'ocean' | 'library';
+  textColor: string;
 }
