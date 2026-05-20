@@ -247,6 +247,8 @@ export function SessionCompletePage() {
                 setShowConfidence(false);
               }}
               buttonLabel="See Graduation Summary →"
+              selectedCatId={selectedCatId}
+              activeCostume={activeCostume}
             />
           </div>
         </div>

@@ -265,49 +265,9 @@ export function getDialogue(catId: string, costumeId: string | null, questionKey
   return baseDialogues[catId]?.[questionKey] || "Let's read and enjoy together! 🐱✨";
 }
 
-// Interactive wardrobe absolute overlays
-export function renderCostumeOverlay(activeCostume: string | null) {
-  if (!activeCostume) return null;
-  
-  switch (activeCostume) {
-    case 'astronaut':
-      return (
-        <div className="absolute inset-[-4px] rounded-full border-4 border-cyan-300 bg-cyan-200/20 animate-pulse flex items-center justify-center z-20 pointer-events-none select-none">
-          <span className="absolute bottom-2 right-4 text-3xl">🚀</span>
-        </div>
-      );
-    case 'pirate':
-      return (
-        <div className="absolute inset-0 pointer-events-none select-none z-20">
-          <span className="absolute -top-12 left-1/2 -translate-x-1/2 text-6xl rotate-[-10deg] drop-shadow-lg select-none">🏴‍☠️</span>
-          <div className="absolute top-[46%] left-[28%] w-8 h-8 rounded-full bg-slate-900 border border-slate-700 shadow" />
-          <div className="absolute top-[41%] left-[17%] w-14 h-0.75 bg-slate-900 rotate-[15deg]" />
-        </div>
-      );
-    case 'sunglasses':
-      return (
-        <div className="absolute inset-0 pointer-events-none select-none z-20 flex items-center justify-center">
-          <span className="absolute top-[36%] text-6xl drop-shadow-md select-none animate-bounce" style={{ animationDuration: '2.5s' }}>🕶️</span>
-        </div>
-      );
-    case 'wizard':
-      return (
-        <div className="absolute inset-0 pointer-events-none select-none z-20">
-          <span className="absolute -top-14 left-1/2 -translate-x-1/2 text-7xl rotate-[-5deg] drop-shadow-lg select-none">🧙‍♂️</span>
-          <span className="absolute top-1/2 -left-6 text-3xl animate-spin" style={{ animationDuration: '4s' }}>✨</span>
-          <span className="absolute top-1/3 -right-6 text-3xl animate-bounce">🔮</span>
-        </div>
-      );
-    case 'crown':
-      return (
-        <div className="absolute inset-0 pointer-events-none select-none z-20">
-          <span className="absolute -top-14 left-1/2 -translate-x-1/2 text-7xl rotate-[4deg] drop-shadow-md animate-bounce select-none" style={{ animationDuration: '3.5s' }}>👑</span>
-          <span className="absolute -top-3 -right-3 text-2xl animate-pulse">✨</span>
-        </div>
-      );
-    default:
-      return null;
-  }
+// Deprecated: costumes are now drawn in pixel-perfect SVG vectors inside CatAvatar!
+export function renderCostumeOverlay(_activeCostume: string | null) {
+  return null;
 }
 
 export interface CatAvatarProps {
@@ -485,7 +445,7 @@ export function CatAvatar({ catId, expression, activeCostume = null, className =
 
   return (
     <div className={`relative ${className}`}>
-      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transition: 'all 0.2s ease-in-out' }}>
+      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transition: 'all 0.2s ease-in-out', overflow: 'visible' }}>
         {/* Ear polygons */}
         {/* Left Ear */}
         <polygon 
@@ -573,6 +533,83 @@ export function CatAvatar({ catId, expression, activeCostume = null, className =
 
         {/* Draw dynamic mouth */}
         {renderMouth()}
+
+        {/* Vector SVG wardrobe overlays sitting perfectly relative to cat head */}
+        {activeCostume === 'pirate' && (
+          <>
+            {/* Pirate strap across head */}
+            <path d="M12,28 L88,64" fill="none" stroke="#0f172a" strokeWidth="4" strokeLinecap="round" />
+            {/* Pirate eyepatch over left eye (centered at cx=26, cy=45) */}
+            <ellipse cx="26" cy="46" rx="12" ry="11" fill="#0f172a" stroke="#1e293b" strokeWidth="1" />
+            {/* Golden skull/cross design inside eyepatch */}
+            <circle cx="26" cy="46" r="3" fill="#eab308" />
+            <line x1="23" y1="43" x2="29" y2="49" stroke="#eab308" strokeWidth="1.2" />
+            <line x1="29" y1="43" x2="23" y2="49" stroke="#eab308" strokeWidth="1.2" />
+            {/* Small pirate hat above head */}
+            <path d="M30,17 C35,7 40,4 50,4 C60,4 65,7 70,17 Z" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
+            <path d="M22,17 Q50,11 78,17" fill="none" stroke="#ef4444" strokeWidth="3" />
+            <circle cx="50" cy="10" r="2.5" fill="#fcfcfc" />
+          </>
+        )}
+
+        {activeCostume === 'sunglasses' && (
+          <>
+            {/* Sunglasses frame and sides */}
+            <path d="M6,40 L16,43" fill="none" stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M94,40 L84,43" fill="none" stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
+            {/* Left lens */}
+            <path d="M14,40 C14,40 22,34 34,38 C38,40 38,53 30,54 C22,55 14,48 14,40 Z" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+            {/* Right lens */}
+            <path d="M86,40 C86,40 78,34 66,38 C62,40 62,53 70,54 C78,55 86,48 86,40 Z" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+            {/* Bridge */}
+            <path d="M34,42 Q50,38 66,42" fill="none" stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
+            {/* Glares */}
+            <line x1="18" y1="42" x2="24" y2="48" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+            <line x1="70" y1="42" x2="76" y2="48" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+          </>
+        )}
+
+        {activeCostume === 'wizard' && (
+          <>
+            {/* Wizard Hat Base and Cone sitting at y=17 */}
+            <path d="M12,20 C12,20 50,11 88,20 L80,16 C80,16 50,7 20,16 Z" fill="#581c87" />
+            <path d="M22,17 L50,-18 L78,17 Z" fill="#6b21a8" />
+            {/* Wizard hat band */}
+            <path d="M22,17 Q50,11 78,17 L76,14 Q50,8 24,14 Z" fill="#eab308" />
+            {/* Stars details on wizard hat */}
+            <polygon points="50,-4 52,-1 55,-1 53,1 54,4 50,2 46,4 47,1 45,-1 48,-1" fill="#fef08a" />
+            <polygon points="40,5 42,7 45,7 43,9 44,12 40,10 36,12 37,9 35,7 38,7" fill="#fef08a" />
+          </>
+        )}
+
+        {activeCostume === 'crown' && (
+          <>
+            {/* Gold Crown sitting at y=17 */}
+            <path d="M26,17 L22,2 L34,10 L50,-4 L66,10 L78,2 L74,17 Z" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5" />
+            {/* Crown base band */}
+            <path d="M26,17 L74,17 L72,13 L28,13 Z" fill="#d97706" />
+            {/* Jewels on peaks */}
+            <circle cx="22" cy="2" r="2.5" fill="#ef4444" />
+            <circle cx="50" cy="-4" r="3" fill="#3b82f6" />
+            <circle cx="78" cy="2" r="2.5" fill="#ec4899" />
+            {/* Jewels on base band */}
+            <circle cx="38" cy="15" r="1.5" fill="#3b82f6" />
+            <circle cx="50" cy="15" r="1.5" fill="#ef4444" />
+            <circle cx="62" cy="15" r="1.5" fill="#10b981" />
+          </>
+        )}
+
+        {activeCostume === 'astronaut' && (
+          <>
+            {/* Translucent cyan helmet bubble over the head */}
+            <circle cx="50" cy="52" r="47" fill="rgba(6, 182, 212, 0.12)" stroke="#06b6d4" strokeWidth="2.5" strokeDasharray="4 2" />
+            {/* Helmet glare highlight */}
+            <path d="M15,25 Q50,5 85,25" fill="none" stroke="rgba(255, 255, 255, 0.55)" strokeWidth="3" strokeLinecap="round" />
+            {/* Tiny mic control */}
+            <path d="M85,75 Q92,85 88,87" fill="none" stroke="#64748b" strokeWidth="2" />
+            <circle cx="88" cy="87" r="2" fill="#ef4444" />
+          </>
+        )}
       </svg>
       {renderCostumeOverlay(activeCostume)}
     </div>

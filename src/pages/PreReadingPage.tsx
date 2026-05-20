@@ -432,6 +432,8 @@ export function PreReadingPage() {
               phase="before"
               onSubmit={() => setShowConfidence(false)}
               buttonLabel="Proceed to Reading"
+              selectedCatId={session.selectedCatId || 'leo'}
+              activeCostume={session.activeCostume}
             />
           </div>
         </div>
