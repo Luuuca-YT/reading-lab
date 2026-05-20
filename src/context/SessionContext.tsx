@@ -13,6 +13,10 @@ interface SessionState {
   articleIds: number[];
   // per-article state: { articleOrder: { readingRecordId, feedback } }
   records: Record<number, { readingRecordId: number | null; studentFeedback: FeedbackAnswer[]; tutorFeedback: FeedbackAnswer[]; events: { word: string; timestamp_ms: number; event_type: 'misread' | 'pause' }[] }>;
+  // Global Companion & Theme configuration
+  selectedCatId?: string | null;
+  selectedThemeId?: string | null;
+  activeCostume?: 'astronaut' | 'pirate' | 'sunglasses' | 'wizard' | 'crown' | null;
 }
 
 function initialRecords() {
