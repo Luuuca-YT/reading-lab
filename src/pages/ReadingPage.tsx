@@ -18,7 +18,7 @@ export function ReadingPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [doneDisabled, setDoneDisabled] = useState(false);
   const startedRef = useRef(false);
-  const blobPromiseRef = useRef<Promise<Blob | null> | null>(null);
+  const blobPromiseRef = useRef<Promise<{ blob: Blob; isSilent: boolean; maxVolume: number } | null> | null>(null);
 
   const order = Number(articleOrder);
 
@@ -34,9 +34,7 @@ export function ReadingPage() {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    recorder.start().then((blob) => {
-      blobPromiseRef.current = Promise.resolve(blob);
-    });
+    blobPromiseRef.current = recorder.start();
 
     return () => {
       recorder.stop();
@@ -100,21 +98,37 @@ export function ReadingPage() {
         });
 
         // Upload audio
-        const blob = await (blobPromiseRef.current ?? Promise.resolve(null));
-        if (blob && blob.size > 0) {
+        const recordData = await (blobPromiseRef.current ?? Promise.resolve(null));
+        if (recordData && recordData.blob && recordData.blob.size > 0) {
           try {
             await authFetch(`/api/records/${record.id}/audio`, {
               method: 'POST',
-              headers: { 'Content-Type': blob.type },
-              body: blob,
+              headers: { 
+                'Content-Type': recordData.blob.type,
+                'X-Audio-Silent': String(recordData.isSilent),
+              },
+              body: recordData.blob,
             });
-          } catch {
+          } catch (err) {
+            console.error('Audio upload failed:', err);
             // Audio upload failed but record is saved
           }
         }
 
-        toast('Reading saved', 'success');
-        navigate(`/session/${id}/feedback/${order}`);
+        // Save readingRecordId into session context
+        setSession({
+          ...session,
+          records: {
+            ...session.records,
+            [order]: {
+              ...session.records[order],
+              readingRecordId: record.id,
+            },
+          },
+        });
+
+        toast('Reading saved successfully', 'success');
+        navigate(`/session/${id}/result/${order}`);
       } catch (err: any) {
         toast(err.message || 'Failed to save', 'error');
         setDoneDisabled(false);

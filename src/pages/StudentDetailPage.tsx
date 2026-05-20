@@ -103,12 +103,25 @@ export function StudentDetailPage() {
             const studentFb = await feedback.getStudentByRecordId(rec.id);
             const tutorFb = await feedback.getTutorByRecordId(rec.id);
 
+            let misreadCount = events.filter((e: ReadingEvent) => e.event_type === 'misread').length;
+            let pauseCount = events.filter((e: ReadingEvent) => e.event_type === 'pause').length;
+
+            try {
+              const res = await readingRecords.getAnalysis(rec.id);
+              if (res.analyzed && res.stats) {
+                misreadCount = res.stats.misreadWords;
+                pauseCount = res.pauses ? res.pauses.length : pauseCount;
+              }
+            } catch (err) {
+              console.error('Failed to get ASR stats overlay in student detail:', err);
+            }
+
             articleSummaries.push({
               recordId: rec.id,
               title: art?.title ?? `Article ${rec.article_id}`,
               audioPath: rec.audio_path ?? null,
-              misread: events.filter((e: ReadingEvent) => e.event_type === 'misread').length,
-              pauses: events.filter((e: ReadingEvent) => e.event_type === 'pause').length,
+              misread: misreadCount,
+              pauses: pauseCount,
               studentQ1: studentFb?.q1_understand ?? '',
               studentQ2: studentFb?.q2_difficulty ?? '',
               studentQ3: studentFb?.q3_interest ?? '',

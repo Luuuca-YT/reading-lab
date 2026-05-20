@@ -63,6 +63,7 @@ db.exec(`
     session_id INTEGER NOT NULL REFERENCES sessions(id),
     article_id INTEGER NOT NULL REFERENCES articles(id),
     audio_path TEXT,
+    is_silent INTEGER DEFAULT 0,
     start_time TEXT,
     end_time TEXT,
     created_at TEXT DEFAULT (datetime('now'))
@@ -73,7 +74,7 @@ db.exec(`
     reading_record_id INTEGER NOT NULL REFERENCES reading_records(id),
     word TEXT NOT NULL,
     timestamp_ms INTEGER NOT NULL,
-    event_type TEXT NOT NULL CHECK(event_type IN ('misread', 'pause'))
+    event_type TEXT NOT NULL CHECK(event_type IN ('misread', 'pause', 'correct'))
   );
 
   CREATE TABLE IF NOT EXISTS student_feedback (
@@ -105,6 +106,80 @@ db.exec(`
     UNIQUE(session_id, phase)
   );
 `);
+
+// Run database migrations / schema expansions for ASR support
+try {
+  const tableSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='reading_events'").get()?.sql || '';
+  if (!tableSql.includes("'correct'")) {
+    console.log('Migrating reading_events table check constraint to support "correct" event type...');
+    db.exec(`
+      PRAGMA foreign_keys=OFF;
+      BEGIN TRANSACTION;
+      CREATE TABLE IF NOT EXISTS reading_events_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reading_record_id INTEGER NOT NULL REFERENCES reading_records(id),
+        word TEXT NOT NULL,
+        timestamp_ms INTEGER NOT NULL,
+        event_type TEXT NOT NULL CHECK(event_type IN ('misread', 'pause', 'correct')),
+        word_index INTEGER,
+        asr_word TEXT,
+        source TEXT DEFAULT 'manual',
+        confidence REAL
+      );
+    `);
+    
+    try {
+      db.exec(`
+        INSERT INTO reading_events_new (id, reading_record_id, word, timestamp_ms, event_type, word_index, asr_word, source, confidence)
+        SELECT id, reading_record_id, word, timestamp_ms, event_type, word_index, asr_word, source, confidence FROM reading_events;
+      `);
+    } catch (err) {
+      db.exec(`
+        INSERT INTO reading_events_new (id, reading_record_id, word, timestamp_ms, event_type)
+        SELECT id, reading_record_id, word, timestamp_ms, event_type FROM reading_events;
+      `);
+    }
+
+    db.exec(`
+      DROP TABLE reading_events;
+      ALTER TABLE reading_events_new RENAME TO reading_events;
+      COMMIT;
+      PRAGMA foreign_keys=ON;
+    `);
+    console.log('reading_events constraint migration completed successfully.');
+  } else {
+    // Columns might already exist but let's make sure they do
+    try { db.exec("ALTER TABLE reading_events ADD COLUMN word_index INTEGER;"); } catch (e) {}
+    try { db.exec("ALTER TABLE reading_events ADD COLUMN asr_word TEXT;"); } catch (e) {}
+    try { db.exec("ALTER TABLE reading_events ADD COLUMN source TEXT DEFAULT 'manual';"); } catch (e) {}
+    try { db.exec("ALTER TABLE reading_events ADD COLUMN confidence REAL;"); } catch (e) {}
+  }
+} catch (e) {
+  console.error('Failed to run reading_events constraint migration, running column additions fallback:', e);
+  try { db.exec("ALTER TABLE reading_events ADD COLUMN word_index INTEGER;"); } catch (e) {}
+  try { db.exec("ALTER TABLE reading_events ADD COLUMN asr_word TEXT;"); } catch (e) {}
+  try { db.exec("ALTER TABLE reading_events ADD COLUMN source TEXT DEFAULT 'manual';"); } catch (e) {}
+  try { db.exec("ALTER TABLE reading_events ADD COLUMN confidence REAL;"); } catch (e) {}
+}
+
+try {
+  db.exec("ALTER TABLE reading_records ADD COLUMN is_silent INTEGER DEFAULT 0;");
+  console.log('Added is_silent column to reading_records successfully.');
+} catch (e) {
+  // Column already exists, ignore
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS asr_transcriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reading_record_id INTEGER NOT NULL REFERENCES reading_records(id),
+    raw_text TEXT NOT NULL,
+    words_json TEXT NOT NULL,
+    model TEXT DEFAULT 'whisper-large-v3',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 
 // Seed articles
 const count = db.prepare('SELECT COUNT(*) AS count FROM articles').get().count;

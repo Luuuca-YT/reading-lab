@@ -11,6 +11,7 @@ import { StudentDetailPage } from './pages/StudentDetailPage';
 import { SessionSetupPage } from './pages/SessionSetupPage';
 import { PreReadingPage } from './pages/PreReadingPage';
 import { ReadingPage } from './pages/ReadingPage';
+import { ReadingResultPage } from './pages/ReadingResultPage';
 import { StudentFeedbackPage } from './pages/StudentFeedbackPage';
 import { TutorFeedbackPage } from './pages/TutorFeedbackPage';
 import { SessionCompletePage } from './pages/SessionCompletePage';
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/session/setup" element={<ProtectedRoute><SessionSetupPage /></ProtectedRoute>} />
               <Route path="/session/:id/ready" element={<ProtectedRoute><PreReadingPage /></ProtectedRoute>} />
               <Route path="/session/:id/read/:articleOrder" element={<ProtectedRoute><ReadingPage /></ProtectedRoute>} />
+              <Route path="/session/:id/result/:articleOrder" element={<ProtectedRoute><ReadingResultPage /></ProtectedRoute>} />
               <Route path="/session/:id/feedback/:articleOrder" element={<ProtectedRoute><StudentFeedbackPage /></ProtectedRoute>} />
               <Route path="/session/:id/tutor-feedback/:articleOrder" element={<ProtectedRoute><TutorFeedbackPage /></ProtectedRoute>} />
               <Route path="/session/:id/complete" element={<ProtectedRoute><SessionCompletePage /></ProtectedRoute>} />
@@ -56,3 +58,4 @@ export default function App() {
     </HashRouter>
   );
 }
+

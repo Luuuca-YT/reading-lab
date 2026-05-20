@@ -4,6 +4,8 @@ interface RecorderState {
   status: 'idle' | 'requesting' | 'recording' | 'paused';
   elapsedMs: number;
   error: string | null;
+  maxVolume: number;
+  isSilent: boolean;
 }
 
 export function useRecorder() {
@@ -11,6 +13,8 @@ export function useRecorder() {
     status: 'idle',
     elapsedMs: 0,
     error: null,
+    maxVolume: 0,
+    isSilent: true,
   });
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -25,8 +29,8 @@ export function useRecorder() {
     }
   };
 
-  const start = useCallback(async (): Promise<Blob | null> => {
-    setState({ status: 'requesting', elapsedMs: 0, error: null });
+  const start = useCallback(async (): Promise<{ blob: Blob; isSilent: boolean; maxVolume: number } | null> => {
+    setState({ status: 'requesting', elapsedMs: 0, error: null, maxVolume: 0, isSilent: true });
     chunksRef.current = [];
 
     try {
@@ -55,15 +59,65 @@ export function useRecorder() {
         setState((s) => ({ ...s, elapsedMs: elapsed }));
       }, 100);
 
-      setState({ status: 'recording', elapsedMs: 0, error: null });
+      setState({ status: 'recording', elapsedMs: 0, error: null, maxVolume: 0, isSilent: true });
+
+      // Setup Web Audio API volume monitoring
+      let maxVal = 0;
+      let audioCtx: AudioContext | null = null;
+      let analyser: AnalyserNode | null = null;
+      let source: MediaStreamAudioSourceNode | null = null;
+      let checkVolumeInterval: any = null;
+
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        checkVolumeInterval = setInterval(() => {
+          if (!analyser) return;
+          analyser.getByteTimeDomainData(dataArray);
+          for (let i = 0; i < bufferLength; i++) {
+            const amplitude = Math.abs(dataArray[i] - 128) / 128;
+            if (amplitude > maxVal) {
+              maxVal = amplitude;
+            }
+          }
+        }, 100);
+      } catch (audioErr) {
+        console.warn('Failed to initialize Web Audio Analyser:', audioErr);
+      }
 
       // Return a promise that resolves when recording stops
-      return new Promise<Blob>((resolve) => {
+      return new Promise((resolve) => {
         recorder.onstop = () => {
+          // Stop volume checking
+          if (checkVolumeInterval) clearInterval(checkVolumeInterval);
+          if (source) source.disconnect();
+          if (audioCtx && audioCtx.state !== 'closed') {
+            audioCtx.close();
+          }
+
           // Stop all tracks
           stream.getTracks().forEach((t) => t.stop());
           const blob = new Blob(chunksRef.current, { type: mimeType });
-          resolve(blob);
+          
+          // Let's define silence as peak amplitude never exceeding 0.025
+          const isSilent = maxVal < 0.025;
+          console.log(`[useRecorder] Stopped. Peak volume detected: ${maxVal.toFixed(4)} (isSilent = ${isSilent})`);
+          
+          setState((s) => ({
+            ...s,
+            maxVolume: maxVal,
+            isSilent,
+          }));
+
+          resolve({ blob, isSilent, maxVolume: maxVal });
         };
       });
     } catch (err: any) {
@@ -73,7 +127,7 @@ export function useRecorder() {
           : err.name === 'NotFoundError'
           ? 'No microphone found. Please connect a microphone and try again.'
           : `Microphone error: ${err.message}`;
-      setState({ status: 'idle', elapsedMs: 0, error: message });
+      setState({ status: 'idle', elapsedMs: 0, error: message, maxVolume: 0, isSilent: true });
       return null;
     }
   }, []);
@@ -106,7 +160,7 @@ export function useRecorder() {
       state.status === 'paused'
         ? accumulatedRef.current
         : accumulatedRef.current + (Date.now() - startRef.current);
-    setState({ status: 'idle', elapsedMs: final, error: null });
+    setState((s) => ({ ...s, status: 'idle', elapsedMs: final }));
   }, [state.status]);
 
   return { ...state, start, pause, resume, stop };

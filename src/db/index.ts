@@ -224,6 +224,16 @@ export const readingRecords = {
     await dexie.readingRecords.update(id, d);
     return (await dexie.readingRecords.get(id))!;
   },
+  analyze: async (id: number) => {
+    if (isElectron()) return { success: false, error: 'ASR is only supported in server/web mode' };
+    if (useServer()) return apiFetch(`/api/records/${id}/analyze`, { method: 'POST' });
+    return { success: false, error: 'ASR is only supported in server/web mode' };
+  },
+  getAnalysis: async (id: number) => {
+    if (isElectron()) return { analyzed: false };
+    if (useServer()) return apiFetch(`/api/records/${id}/analysis`);
+    return { analyzed: false };
+  },
 };
 
 // ══════════════════════════════════════════

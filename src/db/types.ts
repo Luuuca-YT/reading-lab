@@ -92,13 +92,55 @@ export interface ReadingEvent {
   reading_record_id: number;
   word: string;
   timestamp_ms: number;
-  event_type: 'misread' | 'pause';
+  event_type: 'misread' | 'pause' | 'correct';
+  word_index?: number | null;
+  asr_word?: string | null;
+  source?: 'manual' | 'asr' | null;
+  confidence?: number | null;
 }
 
 export type ReadingEventCreate = Pick<
   ReadingEvent,
   'reading_record_id' | 'word' | 'timestamp_ms' | 'event_type'
->;
+> & Partial<Pick<ReadingEvent, 'word_index' | 'asr_word' | 'source' | 'confidence'>>;
+
+export interface AlignmentEntry {
+  type: 'match' | 'substitution' | 'deletion' | 'insertion';
+  originalIndex: number | null;
+  originalWord: string | null;
+  asrIndex: number | null;
+  asrWord: string | null;
+  start: number | null;
+  end: number | null;
+  manual?: boolean;
+}
+
+export interface PauseEntry {
+  durationMs: number;
+  afterOriginalIndex: number | null;
+  afterWord: string | null;
+  startSec: number;
+  endSec: number;
+  manual?: boolean;
+}
+
+export interface AnalysisStats {
+  totalWords: number;
+  correctWords: number;
+  misreadWords: number;
+  skippedWords: number;
+  accuracy: number;
+}
+
+export interface AnalysisResult {
+  analyzed: boolean;
+  stats?: AnalysisStats;
+  alignment?: AlignmentEntry[];
+  pauses?: PauseEntry[];
+  rawText?: string;
+  isMock?: boolean;
+}
+
 
 // ── Student Feedback ──
 export interface StudentFeedback {
