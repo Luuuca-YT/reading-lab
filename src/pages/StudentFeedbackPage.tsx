@@ -194,26 +194,21 @@ export function StudentFeedbackPage() {
   }, [hoveredIdx, selectedAnswer, currentQuestion, selectedCatId, activeCostume]);
 
   function selectOption(optionLabel: string) {
+    // Prevent double-selection or selecting already-selected option
+    if (answers[currentQuestion.key] === optionLabel) return;
     synth.playSelect();
     setAnswers((prev) => ({ ...prev, [currentQuestion.key]: optionLabel }));
-    
-    if (currentIdx < questions.length - 1) {
-      setTimeout(() => {
-        handleNext();
-      }, 550);
-    }
   }
 
   function handleNext() {
-    if (currentIdx < questions.length - 1) {
-      setSlideDirection('next');
-      setIsTransitioning(true);
-      setHoveredIdx(null);
-      setTimeout(() => {
-        setCurrentIdx((prev) => prev + 1);
-        setIsTransitioning(false);
-      }, 350);
-    }
+    if (currentIdx >= questions.length - 1) return;
+    setSlideDirection('next');
+    setIsTransitioning(true);
+    setHoveredIdx(null);
+    setTimeout(() => {
+      setCurrentIdx((prev) => prev < questions.length - 1 ? prev + 1 : prev);
+      setIsTransitioning(false);
+    }, 350);
   }
 
   function handlePrev() {
@@ -455,7 +450,7 @@ export function StudentFeedbackPage() {
         >
           
           {/* LEFT PANEL: Interactive Mascot Playground */}
-          <div className="col-span-1 md:col-span-5 flex flex-col items-center justify-center bg-black/15 backdrop-blur-md rounded-3xl border border-white/10 p-5 md:p-6 text-center min-h-[380px] md:min-h-[440px] shadow-lg relative overflow-hidden group">
+          <div className="col-span-1 md:col-span-5 flex flex-col items-center gap-0 bg-black/15 backdrop-blur-md rounded-3xl border border-white/10 p-5 md:p-6 text-center min-h-[440px] shadow-lg relative overflow-hidden group">
             
             {/* Ambient colorful background glow matching the question theme */}
             <div className={`absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-20 filter blur-2xl transition-all duration-700 animate-glow ${currentTheme.glowColor}`} />
@@ -463,16 +458,16 @@ export function StudentFeedbackPage() {
             {/* Floating Reactive Particle System Background Container */}
             {renderThemeParticles(currentTheme.particleType)}
 
-            {/* Elastic Speech Bubble */}
-            <div 
+            {/* Elastic Speech Bubble — fixed min-height prevents layout jitter when dialogue length changes */}
+            <div
               key={activeMascot.dialogue}
-              className="relative bg-white/95 border border-slate-200 rounded-2xl p-4 shadow-xl text-slate-800 font-extrabold text-sm md:text-base text-center max-w-sm w-full leading-relaxed animate-pop-bounce mb-6 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:border-[8px] after:border-transparent after:border-t-white/95 before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:border-[9px] before:border-transparent before:border-t-slate-200/90 z-10"
+              className="relative bg-white/95 border border-slate-200 rounded-2xl p-4 shadow-xl text-slate-800 font-extrabold text-sm md:text-base text-center max-w-sm w-full leading-relaxed animate-pop-bounce min-h-[72px] flex items-center justify-center after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:border-[8px] after:border-transparent after:border-t-white/95 before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:border-[9px] before:border-transparent before:border-t-slate-200/90 z-10"
             >
               {activeMascot.dialogue}
             </div>
 
-            {/* Breathing Mascot Circle Container */}
-            <div className="relative w-52 h-52 md:w-64 md:h-64 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center transition-all duration-300 animate-float-slow z-10">
+            {/* Breathing Mascot Circle Container — fixed size, never shrinks */}
+            <div className="relative w-52 h-52 md:w-64 md:h-64 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center flex-shrink-0 my-4 transition-all duration-300 animate-float-slow z-10">
               
               <div className="absolute inset-4 rounded-full bg-white/5 filter blur(6px)" />
 
@@ -486,8 +481,8 @@ export function StudentFeedbackPage() {
 
             </div>
 
-            {/* Interactive Dressing Closet Shelf */}
-            <div className="mt-6 w-full max-w-xs bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-md z-10">
+            {/* Interactive Dressing Closet Shelf — pinned to bottom */}
+            <div className="mt-auto w-full max-w-xs bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-md z-10 flex-shrink-0">
               <p className="text-[9px] font-black text-slate-350 uppercase tracking-widest mb-1.5 text-center">🐾 Outfit Wardrobe 🐾</p>
               <div className="flex justify-around items-center gap-1">
                 {[

@@ -16,150 +16,18 @@ function normalizeWord(word) {
     .trim();
 }
 
-// Equivalence mappings to support highly accurate English reading assessment.
-const CONTRACTIONS = {
-  "dont": "do not",
-  "cant": "cannot",
-  "wont": "will not",
-  "im": "i am",
-  "hes": "he is",
-  "shes": "she is",
-  "its": "it is",
-  "theyre": "they are",
-  "youre": "you are",
-  "weare": "we are",
-  "ive": "i have",
-  "youve": "you have",
-  "weve": "we have",
-  "theyve": "they have",
-  "id": "i would",
-  "youd": "you would",
-  "hed": "he would",
-  "shed": "she would",
-  "wed": "we would",
-  "theyd": "they would",
-  "ill": "i will",
-  "youll": "you will",
-  "hell": "he will",
-  "shell": "she will",
-  "well": "we will",
-  "theyll": "they will",
-  "isnt": "is not",
-  "arent": "are not",
-  "wasnt": "was not",
-  "werent": "were not",
-  "havent": "have not",
-  "hasnt": "has not",
-  "hadnt": "had not",
-  "doesnt": "does not",
-  "didnt": "did not",
-  "couldnt": "could not",
-  "shouldnt": "should not",
-  "wouldnt": "would not"
-};
-
-const NUMBER_WORDS = {
-  "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four",
-  "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine",
-  "10": "ten", "11": "eleven", "12": "twelve", "13": "thirteen",
-  "14": "fourteen", "15": "fifteen", "16": "sixteen", "17": "seventeen",
-  "18": "eighteen", "19": "nineteen", "20": "twenty"
-};
-
-const SPELLING_VARIANTS = {
-  "colour": "color",
-  "grey": "gray",
-  "favourite": "favorite",
-  "theatre": "theater",
-  "realise": "realize",
-  "organise": "organize",
-  "labour": "labor",
-  "neighbour": "neighbor",
-  "neighbourhood": "neighborhood",
-  "learnt": "learned",
-  "dreamt": "dreamed"
-};
 
 /**
- * Checks if two normalized words are equivalent for reading assessment purposes.
- * Supports exact matching, contractions, spelling variants, and basic numbers.
+ * Strict exact-match word comparison for reading assessment.
+ * Uses only normalized comparison. No spelling variants, no contractions, no number
+ * substitutions — the student must read exactly what is written.
  */
 function areWordsEquivalent(w1, w2) {
   const n1 = normalizeWord(w1);
   const n2 = normalizeWord(w2);
-  if (n1 === n2) return true;
-  if (!n1 || !n2) return false;
-
-  // 1. Regional spelling variants
-  const c1 = SPELLING_VARIANTS[n1] || n1;
-  const c2 = SPELLING_VARIANTS[n2] || n2;
-  if (c1 === c2) return true;
-  
-  // Reverse spelling variants lookup
-  const revSpelling = {};
-  for (const [k, v] of Object.entries(SPELLING_VARIANTS)) {
-    revSpelling[v] = k;
-  }
-  const rc1 = revSpelling[n1] || n1;
-  const rc2 = revSpelling[n2] || n2;
-  if (rc1 === rc2) return true;
-
-  // 2. Numerical representations
-  const num1 = NUMBER_WORDS[n1] || n1;
-  const num2 = NUMBER_WORDS[n2] || n2;
-  if (num1 === num2) return true;
-  
-  const revNumber = {};
-  for (const [k, v] of Object.entries(NUMBER_WORDS)) {
-    revNumber[v] = k;
-  }
-  const rnum1 = revNumber[n1] || n1;
-  const rnum2 = revNumber[n2] || n2;
-  if (rnum1 === rnum2) return true;
-
-  // 3. Common contractions
-  const cont1 = CONTRACTIONS[n1] || n1;
-  const cont2 = CONTRACTIONS[n2] || n2;
-  if (cont1 === cont2) return true;
-  
-  const revContraction = {};
-  for (const [k, v] of Object.entries(CONTRACTIONS)) {
-    revContraction[v] = k;
-  }
-  const rcont1 = revContraction[n1] || n1;
-  const rcont2 = revContraction[n2] || n2;
-  if (rcont1 === rcont2) return true;
-
-  return false;
+  return n1 === n2 && n1 !== '';
 }
 
-/**
- * Calculates the character-level Levenshtein edit distance between two strings.
- * Used internally for DP path tie-breaking or phonetic check fallbacks.
- */
-function charLevenshtein(s1, s2) {
-  const m = s1.length;
-  const n = s2.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (s1[i - 1] === s2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
-      } else {
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,    // deletion
-          dp[i][j - 1] + 1,    // insertion
-          dp[i - 1][j - 1] + 1 // substitution
-        );
-      }
-    }
-  }
-  return dp[m][n];
-}
 
 /**
  * Aligns original article words with ASR transcribed words using dynamic programming.
@@ -190,7 +58,9 @@ function alignWords(originalWords, asrWords) {
     for (let j = 1; j <= M; j++) {
       const asrNorm = normalizeWord(asrWords[j - 1].word);
 
-      let costDiag = 1.0;
+      // Slightly higher cost for substitution vs deletion so trailing
+      // unmatched words prefer deletion (skipped) over substitution (misread).
+      let costDiag = 1.001;
       if (areWordsEquivalent(origNorm, asrNorm)) {
         costDiag = 0.0;
       }
@@ -360,7 +230,6 @@ function analyzeReading(articleContent, asrResult, pauseThresholdMs = 2000) {
 
 module.exports = {
   normalizeWord,
-  charLevenshtein,
   alignWords,
   detectPauses,
   analyzeReading

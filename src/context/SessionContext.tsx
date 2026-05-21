@@ -12,7 +12,7 @@ interface SessionState {
   currentArticle: number; // 1, 2, or 3
   articleIds: number[];
   // per-article state: { articleOrder: { readingRecordId, feedback } }
-  records: Record<number, { readingRecordId: number | null; studentFeedback: FeedbackAnswer[]; tutorFeedback: FeedbackAnswer[]; events: { word: string; timestamp_ms: number; event_type: 'misread' | 'pause' }[] }>;
+  records: Record<number, { readingRecordId: number | null; studentFeedback: FeedbackAnswer[]; tutorFeedback: FeedbackAnswer[]; events: { word: string; timestamp_ms: number; event_type: 'misread' | 'pause' | 'correct'; word_index?: number }[] }>;
   // Global Companion & Theme configuration
   selectedCatId?: string | null;
   selectedThemeId?: string | null;

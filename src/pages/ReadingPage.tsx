@@ -5,7 +5,7 @@ import { useSession } from '../context/SessionContext';
 import { useToast } from '../context/ToastContext';
 import { useRecorder, formatMs } from '../hooks/useRecorder';
 import { authFetch } from '../context/AuthContext';
-import { articles, readingRecords } from '../db';
+import { articles, readingRecords, readingEvents } from '../db';
 import type { Article } from '../db';
 import { CatAvatar } from '../components/CatAvatar';
 import { synth } from '../utils/audio';
@@ -67,6 +67,7 @@ export function ReadingPage() {
   const recorder = useRecorder();
   const [article, setArticle] = useState<Article | null>(null);
   const [doneDisabled, setDoneDisabled] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; wordIndex: number; word: string } | null>(null);
   const startedRef = useRef(false);
   const blobPromiseRef = useRef<Promise<{ blob: Blob; isSilent: boolean; maxVolume: number } | null> | null>(null);
 
@@ -83,7 +84,7 @@ export function ReadingPage() {
   // Mascot encourages reading state
   const mascotSpeech = useMemo(() => {
     if (recorder.status === 'recording') {
-      return `Listening closely... you're doing great! Keep reading! 🎙️🐾`;
+      return `Keep reading aloud — click any word to mark it as misread! 🎙️🐾`;
     }
     if (recorder.status === 'paused') {
       return `Paused! Take a deep breath and a sweet sip of water! 🥤😺`;
@@ -118,24 +119,47 @@ export function ReadingPage() {
     }
   }, [recorder.error, toast]);
 
-  const markWord = useCallback((word: string) => {
-    synth.playHover();
+  // Close context menu on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setContextMenu(null); }
+    if (contextMenu) { window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }
+  }, [contextMenu]);
+
+  const toggleWordMark = useCallback((word: string, wordIndex: number, eventType: 'misread' | 'pause') => {
+    synth.playSelect();
+    const currentEvents = session.records[order]?.events ?? [];
+    const existingIdx = currentEvents.findIndex((e: any) => e.word_index === wordIndex);
+
+    let newEvents;
+    if (existingIdx !== -1 && currentEvents[existingIdx].event_type === eventType) {
+      // Same type at same index — remove (unmark)
+      newEvents = [...currentEvents];
+      newEvents.splice(existingIdx, 1);
+      if (eventType === 'pause') toast('Pause removed', 'info');
+    } else if (existingIdx !== -1) {
+      // Different type — replace
+      newEvents = [...currentEvents];
+      newEvents[existingIdx] = { word, word_index: wordIndex, timestamp_ms: recorder.elapsedMs, event_type: eventType };
+      toast(eventType === 'pause' ? 'Changed to pause' : 'Changed to misread', 'info');
+    } else {
+      // Not marked — add
+      newEvents = [...currentEvents, { word, word_index: wordIndex, timestamp_ms: recorder.elapsedMs, event_type: eventType }];
+      if (eventType === 'pause') toast('Pause marked', 'info');
+    }
+
     setSession({
       ...session,
       records: {
         ...session.records,
         [order]: {
           ...session.records[order],
-          events: [
-            ...session.records[order].events,
-            { word, timestamp_ms: recorder.elapsedMs, event_type: 'misread' as const },
-          ],
+          events: newEvents,
         },
       },
     });
-  }, [session, order, recorder.elapsedMs, setSession]);
+  }, [session, order, recorder.elapsedMs, setSession, toast]);
 
-  const markPause = useCallback(() => {
+  const markGlobalPause = useCallback(() => {
     synth.playHover();
     setSession({
       ...session,
@@ -175,7 +199,7 @@ export function ReadingPage() {
           try {
             await authFetch(`/api/records/${record.id}/audio`, {
               method: 'POST',
-              headers: { 
+              headers: {
                 'Content-Type': recordData.blob.type,
                 'X-Audio-Silent': String(recordData.isSilent),
               },
@@ -184,6 +208,25 @@ export function ReadingPage() {
           } catch (err) {
             console.error('Audio upload failed:', err);
           }
+        }
+
+        // Sync manual marks (misread/pause) to DB so they appear in analysis
+        const manualEvents = session.records[order]?.events ?? [];
+        try {
+          await readingEvents.batchCreate(
+            manualEvents
+              .filter((e: any) => e.event_type !== 'correct')
+              .map((e: any) => ({
+                reading_record_id: record.id,
+                word: e.word,
+                timestamp_ms: e.timestamp_ms,
+                event_type: e.event_type,
+                word_index: e.word_index ?? null,
+                source: 'manual' as const,
+              }))
+          );
+        } catch (err) {
+          console.error('Failed to sync manual events:', err);
         }
 
         // Save readingRecordId into session context
@@ -365,7 +408,7 @@ export function ReadingPage() {
                 </span>
                 <div className="flex gap-2">
                   {recorder.status === 'recording' && (
-                    <button 
+                    <button
                       onClick={() => { synth.playHover(); recorder.pause(); }}
                       className="btn-3d px-3.5 py-1.5 rounded-xl text-xs font-bold border border-b-4 border-slate-350 bg-slate-100 hover:bg-slate-200 border-b-slate-300 text-slate-700 active:translate-y-[2px]"
                     >
@@ -373,7 +416,7 @@ export function ReadingPage() {
                     </button>
                   )}
                   {recorder.status === 'paused' && (
-                    <button 
+                    <button
                       onClick={() => { synth.playSelect(); recorder.resume(); }}
                       className="btn-3d px-3.5 py-1.5 rounded-xl text-xs font-bold border border-b-4 border-emerald-650 bg-emerald-500 hover:bg-emerald-600 border-b-emerald-700 text-white active:translate-y-[2px]"
                     >
@@ -398,22 +441,37 @@ export function ReadingPage() {
                 <div className="text-lg md:text-xl font-medium text-slate-750 leading-[2.2] tracking-wide">
                   {article?.content.split(' ').map((word, i) => {
                     const cleanWord = word.replace(/[.,!?"'()]/g, '');
-                    const isMarked = events.some(
-                      (e) => e.event_type === 'misread' && e.word === cleanWord
+                    const wordEvent = events.find(
+                      (e) => e.word_index === i
                     );
+                    const isMisread = wordEvent?.event_type === 'misread';
+                    const isPauseWord = wordEvent?.event_type === 'pause';
+
                     return (
-                      <span key={i} className="inline-block mr-1">
+                      <span key={i} className="inline-block mr-1 relative">
                         <span
-                          onClick={() => markWord(cleanWord)}
+                          onClick={() => toggleWordMark(cleanWord, i, 'misread')}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setContextMenu({ x: e.clientX, y: e.clientY, wordIndex: i, word: cleanWord });
+                          }}
                           className={`cursor-pointer rounded px-1 py-0.5 transition-all duration-120 font-semibold select-none ${
-                            isMarked
+                            isMisread
                               ? 'bg-red-150 text-red-700 line-through decoration-red-400 font-bold border border-red-200 scale-95 shadow-sm'
+                              : isPauseWord
+                              ? 'bg-amber-100 text-amber-700 font-bold border border-amber-300 shadow-sm'
                               : 'hover:bg-indigo-50 text-slate-800'
                           }`}
-                          title="Click to mark as misread"
+                          title="Left-click: toggle misread | Right-click: choose type"
                         >
                           {word}
-                        </span>{' '}
+                        </span>
+                        {/* Pause pill after word */}
+                        {isPauseWord && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-black text-amber-700 ml-0.5 align-middle leading-none">
+                            ⏸
+                          </span>
+                        )}{' '}
                       </span>
                     );
                   })}
@@ -423,7 +481,7 @@ export function ReadingPage() {
               {/* Status footer inside article card */}
               <div className="flex justify-between items-center border-t border-slate-100 pt-6 mt-8">
                 <button
-                  onClick={markPause}
+                  onClick={markGlobalPause}
                   className="btn-3d px-4 py-2 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-b-4 border-amber-250 border-b-amber-400 rounded-xl active:translate-y-[2px]"
                 >
                   ⏸ Mark Pause
@@ -496,6 +554,59 @@ export function ReadingPage() {
         </div>
 
       </div>
+
+      {/* Right-click context menu */}
+      {contextMenu && (() => {
+        const existingEvent = session.records[order]?.events?.find(
+          (e: any) => e.word_index === contextMenu.wordIndex
+        );
+        const isMarked = !!existingEvent;
+        const isMisread = existingEvent?.event_type === 'misread';
+        const isPause = existingEvent?.event_type === 'pause';
+
+        return (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+          />
+          <div
+            className="fixed z-50 rounded-2xl border border-white/10 bg-slate-900 shadow-2xl py-1.5 min-w-[180px] backdrop-blur-xl overflow-hidden"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <p className="px-4 py-1.5 text-[10px] font-black text-white/40 uppercase tracking-widest border-b border-white/5">
+              "{contextMenu.word}"
+            </p>
+            <button
+              onClick={() => { toggleWordMark(contextMenu.word, contextMenu.wordIndex, 'misread'); setContextMenu(null); }}
+              className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center gap-3 transition-colors ${
+                isMisread ? 'bg-red-500/10 text-red-200 hover:bg-red-500/20' : 'text-red-300 hover:bg-red-500/10 hover:text-red-200'
+              }`}
+            >
+              🔥 {isMisread ? '✓ Marked — click to unmark' : 'Mark as Misread'}
+            </button>
+            <button
+              onClick={() => { toggleWordMark(contextMenu.word, contextMenu.wordIndex, 'pause'); setContextMenu(null); }}
+              className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center gap-3 transition-colors ${
+                isPause ? 'bg-amber-500/10 text-amber-200 hover:bg-amber-500/20' : 'text-amber-300 hover:bg-amber-500/10 hover:text-amber-200'
+              }`}
+            >
+              ⏸ {isPause ? '✓ Marked — click to unmark' : 'Mark as Pause'}
+            </button>
+            {isMarked && (
+              <button
+                onClick={() => { toggleWordMark(contextMenu.word, contextMenu.wordIndex, existingEvent.event_type as 'misread' | 'pause'); setContextMenu(null); }}
+                className="w-full text-left px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-500/10 hover:text-slate-300 flex items-center gap-3 transition-colors border-t border-white/5"
+              >
+                ✕ Remove Mark
+              </button>
+            )}
+          </div>
+        </>
+        );
+      })()}
+
     </Layout>
   );
 }

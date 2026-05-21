@@ -107,8 +107,9 @@ export function useRecorder() {
           stream.getTracks().forEach((t) => t.stop());
           const blob = new Blob(chunksRef.current, { type: mimeType });
           
-          // Let's define silence as peak amplitude never exceeding 0.025
-          const isSilent = maxVal < 0.025;
+          // Silence threshold: peak amplitude must exceed ~6% to count as speech.
+          // This prevents Whisper hallucination from quiet ambient noise or breath.
+          const isSilent = maxVal < 0.06;
           console.log(`[useRecorder] Stopped. Peak volume detected: ${maxVal.toFixed(4)} (isSilent = ${isSilent})`);
           
           setState((s) => ({

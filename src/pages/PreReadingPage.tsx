@@ -469,18 +469,18 @@ export function PreReadingPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center min-h-[400px] z-10">
           
           {/* LEFT COLUMN: Animated Mascot Cat & Wardrobe dressing shelf */}
-          <div className="col-span-1 md:col-span-5 flex flex-col items-center justify-center bg-black/15 backdrop-blur-md rounded-3xl border border-white/10 p-5 md:p-6 text-center min-h-[380px] shadow-lg relative overflow-hidden group">
+          <div className="col-span-1 md:col-span-5 flex flex-col items-center gap-0 bg-black/15 backdrop-blur-md rounded-3xl border border-white/10 p-5 md:p-6 text-center min-h-[440px] shadow-lg relative overflow-hidden group">
             
             {/* Absolute ambient light sphere */}
             <div className={`absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-20 filter blur-2xl animate-glow bg-white/20`} />
 
-            {/* encouraging Speech Bubble */}
-            <div className="relative bg-white/95 border border-slate-200 rounded-2xl p-4 shadow-xl text-slate-800 font-extrabold text-sm md:text-base text-center max-w-sm w-full leading-relaxed animate-pop-bounce mb-6 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:border-[8px] after:border-transparent after:border-t-white/95 before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:border-[9px] before:border-transparent before:border-t-slate-200/90 z-10">
+            {/* encouraging Speech Bubble — stable height prevents layout jitter */}
+            <div className="relative bg-white/95 border border-slate-200 rounded-2xl p-4 shadow-xl text-slate-800 font-extrabold text-sm md:text-base text-center max-w-sm w-full leading-relaxed animate-pop-bounce min-h-[72px] flex items-center justify-center after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:border-[8px] after:border-transparent after:border-t-white/95 before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:border-[9px] before:border-transparent before:border-t-slate-200/90 z-10">
               {currentEncouragement}
             </div>
 
-            {/* Floating Mascot Avatar */}
-            <div className="relative w-48 h-48 md:w-56 md:h-56 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center animate-float-slow z-10">
+            {/* Floating Mascot Avatar — fixed size, never shrinks */}
+            <div className="relative w-48 h-48 md:w-56 md:h-56 rounded-full bg-white/10 border-4 border-white/20 shadow-xl flex items-center justify-center flex-shrink-0 my-4 animate-float-slow z-10">
               <div className="absolute inset-4 rounded-full bg-white/5 filter blur(6px)" />
               <CatAvatar 
                 catId={activeCat.id} 
@@ -490,8 +490,8 @@ export function PreReadingPage() {
               />
             </div>
 
-            {/* Outfit Wardrobe closet drawer */}
-            <div className="mt-6 w-full max-w-xs bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-md z-10">
+            {/* Outfit Wardrobe closet drawer — pinned to bottom */}
+            <div className="mt-auto w-full max-w-xs bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-md z-10 flex-shrink-0">
               <p className="text-[9px] font-black text-slate-350 uppercase tracking-widest mb-1.5 text-center">🐾 Outfit Wardrobe 🐾</p>
               <div className="flex justify-around items-center gap-1">
                 {[

@@ -130,8 +130,8 @@ export function ReadingResultPage() {
         const eventsList = await readingEvents.getByRecordId(recordId!);
         const overrides: Record<number, 'misread' | 'correct'> = {};
         eventsList.forEach((evt: ReadingEvent) => {
-          if (evt.source === 'manual' && evt.word_index !== null && evt.word_index !== undefined) {
-            overrides[evt.word_index] = evt.event_type === 'misread' ? 'misread' : 'correct';
+          if (evt.source === 'manual' && evt.word_index !== null && evt.word_index !== undefined && evt.event_type === 'misread') {
+            overrides[evt.word_index] = 'misread';
           }
         });
         setManualOverrides(overrides);
@@ -193,7 +193,21 @@ export function ReadingResultPage() {
         setPauses(res.pauses || []);
         setStats(res.stats || null);
         setIsMock(!!res.isMock);
-        setManualOverrides({}); // reset manual overrides on re-analysis
+
+        // Reload manual marks from reading (preserved across analysis since they have source='manual')
+        try {
+          const eventsList = await readingEvents.getByRecordId(recordId);
+          const overrides: Record<number, 'misread' | 'correct'> = {};
+          eventsList.forEach((evt: any) => {
+            if (evt.source === 'manual' && evt.word_index !== null && evt.word_index !== undefined && evt.event_type === 'misread') {
+              overrides[evt.word_index] = 'misread';
+            }
+          });
+          setManualOverrides(overrides);
+        } catch (e) {
+          setManualOverrides({});
+        }
+
         toast('Analysis completed successfully!', 'success');
       } else {
         throw new Error(res.error || 'ASR analysis failed');
@@ -207,25 +221,33 @@ export function ReadingResultPage() {
     }
   };
 
-  // Toggle manual misread override when a word is clicked
+  // Toggle manual override when a word is clicked:
+  //   no override → mark misread
+  //   has override → remove (revert to ASR)
   const handleWordClick = (wordIndex: number) => {
-    // Determine the current state of this word (considering alignment + overrides)
     const alignItem = alignment.find((e) => e.originalIndex === wordIndex);
     if (!alignItem) return;
 
-    const currentType = manualOverrides[wordIndex] 
-      ? (manualOverrides[wordIndex] === 'misread' ? 'substitution' : 'match')
-      : alignItem.type;
-
-    const isCurrentlyMisread = currentType === 'substitution' || currentType === 'deletion';
-    const newOverride: 'misread' | 'correct' = isCurrentlyMisread ? 'correct' : 'misread';
-
-    const updatedOverrides: Record<number, 'misread' | 'correct'> = { ...manualOverrides, [wordIndex]: newOverride };
-    setManualOverrides(updatedOverrides);
-
-    // Save the manual event correction to the database in real-time
-    saveManualOverrides(updatedOverrides);
+    if (manualOverrides[wordIndex] !== undefined) {
+      // Has override — remove it (revert to ASR)
+      const updatedOverrides: Record<number, 'misread' | 'correct'> = { ...manualOverrides };
+      delete updatedOverrides[wordIndex];
+      setManualOverrides(updatedOverrides);
+      saveManualOverrides(updatedOverrides);
+    } else {
+      // No override — mark as misread
+      const updatedOverrides: Record<number, 'misread' | 'correct'> = { ...manualOverrides, [wordIndex]: 'misread' };
+      setManualOverrides(updatedOverrides);
+      saveManualOverrides(updatedOverrides);
+    }
   };
+
+  // Context menu for analysis page
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; wordIndex: number; word: string } | null>(null);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setContextMenu(null); }
+    if (contextMenu) { window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }
+  }, [contextMenu]);
 
   const saveManualOverrides = async (currentOverrides: Record<number, 'misread' | 'correct'>) => {
     if (!recordId) return;
@@ -696,6 +718,10 @@ export function ReadingResultPage() {
                         synth.playHover();
                         handleWordClick(item.originalIndex!);
                       }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({ x: e.clientX, y: e.clientY, wordIndex: item.originalIndex!, word: item.originalWord! });
+                      }}
                       className={highlightStyle}
                     >
                       {item.originalWord}
@@ -808,6 +834,53 @@ export function ReadingResultPage() {
         </div>
 
       </div>
+
+      {/* Right-click context menu for word override */}
+      {contextMenu && (() => {
+        const hasOverride = manualOverrides[contextMenu.wordIndex] !== undefined;
+        const currentOverride = manualOverrides[contextMenu.wordIndex];
+        return (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
+          <div className="fixed z-50 rounded-2xl border border-white/10 bg-slate-900 shadow-2xl py-1.5 min-w-[200px] backdrop-blur-xl overflow-hidden" style={{ left: contextMenu.x, top: contextMenu.y }}>
+            <p className="px-4 py-1.5 text-[10px] font-black text-white/40 uppercase tracking-widest border-b border-white/5">
+              "{contextMenu.word}"
+            </p>
+            <button
+              onClick={() => {
+                const updated: Record<number, 'misread' | 'correct'> = { ...manualOverrides, [contextMenu.wordIndex]: 'misread' };
+                setManualOverrides(updated); saveManualOverrides(updated); setContextMenu(null);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center gap-3 transition-colors ${currentOverride === 'misread' ? 'bg-red-500/10 text-red-200' : 'text-red-300 hover:bg-red-500/10 hover:text-red-200'}`}
+            >
+              🔥 {currentOverride === 'misread' ? '✓ Misread' : 'Mark as Misread'}
+            </button>
+            <button
+              onClick={() => {
+                const updated: Record<number, 'misread' | 'correct'> = { ...manualOverrides, [contextMenu.wordIndex]: 'correct' };
+                setManualOverrides(updated); saveManualOverrides(updated); setContextMenu(null);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center gap-3 transition-colors ${currentOverride === 'correct' ? 'bg-emerald-500/10 text-emerald-200' : 'text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200'}`}
+            >
+              ✅ {currentOverride === 'correct' ? '✓ Correct' : 'Mark as Correct'}
+            </button>
+            {hasOverride && (
+              <button
+                onClick={() => {
+                  const updated: Record<number, 'misread' | 'correct'> = { ...manualOverrides };
+                  delete updated[contextMenu.wordIndex];
+                  setManualOverrides(updated); saveManualOverrides(updated); setContextMenu(null);
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-500/10 hover:text-slate-300 flex items-center gap-3 transition-colors border-t border-white/5"
+              >
+                ✕ Remove Override
+              </button>
+            )}
+          </div>
+        </>
+        );
+      })()}
+
     </Layout>
   );
 }
